@@ -4,7 +4,6 @@ using System ;
 public class Dash : Spatial
 {
   private const string DurationTimerPath = "DurationTimer" ;
-  private const string DashEffectScenePath = "res://Scenes/DashEffect.tscn" ;
   private const string TimeOutEventName = "timeout" ;
   private Timer _durationTimer ;
   private bool _canDash = true ;
@@ -24,7 +23,6 @@ public class Dash : Spatial
     _durationTimer = GetNode<Timer>( DurationTimerPath ) ;
     _durationTimer.OneShot = true ;
     _durationTimer.Connect( TimeOutEventName, this, nameof( OnDurationTimer_TimeOut ) ) ;
-    _dashEffectResource = GD.Load( DashEffectScenePath ) as PackedScene ;
     base._Ready() ;
   }
 
@@ -32,19 +30,6 @@ public class Dash : Spatial
   {
     _durationTimer.WaitTime = duration ;
     _durationTimer.Start() ;
-    InstanceEffect( ) ;
-  }
-
-  private void InstanceEffect( )
-  {
-    if ( ! ( _dashEffectResource.Instance() is Sprite effect ) ) return ;
-    GetParent().GetParent().AddChild( effect ) ;
-    effect.GlobalPosition = new Vector2( GlobalTransform.origin.x, GlobalTransform.origin.y ) ;
-    // effect.Texture = sprite.Texture ;
-    // effect.Vframes = sprite.Vframes ;
-    // effect.Hframes = sprite.Hframes ;
-    // effect.Frame = sprite.Frame ;
-    // effect.FlipH = sprite.FlipH ;
   }
 
   private async void EndDash()
