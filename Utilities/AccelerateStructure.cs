@@ -1,50 +1,51 @@
-﻿using System.Collections.Generic ;
+﻿using System ;
+using System.Collections.Generic ;
 using System.Linq ;
 using System.Runtime.CompilerServices ;
 using Godot ;
 
 namespace Fish.Utilities
 {
-  public class AccelerateStructure
+  public class BoidAccelerateStructure2D
   {
-    private readonly Vector2 _gridSize ;
-    private readonly int _scaleDownFactor ;
-    private readonly List<Node2D>[ , ] _cells ;
+    public readonly Vector2 GridSize ;
+    public readonly int ScaleDownFactor ;
+    private readonly List<Boid>[ , ] _cells ;
 
-    public AccelerateStructure( Vector2 unscaleGridSize, int scaleDownFactor )
+    public BoidAccelerateStructure2D( Vector2 unscaleGridSize, int scaleDownFactor )
     {
-      _scaleDownFactor = scaleDownFactor ;
-      _gridSize = ( unscaleGridSize / _scaleDownFactor ).Floor() ;
-      _cells = new List<Node2D>[ (int) _gridSize.x + 1, (int) _gridSize.y + 1 ] ;
+      ScaleDownFactor = scaleDownFactor ;
+      GridSize = ( unscaleGridSize / ScaleDownFactor ).Floor() ;
+      _cells = new List<Boid>[ (int) GridSize.x + 1, (int) GridSize.y + 1 ] ;
       for ( var row = 0 ; row < _cells.GetLength( 0 ) ; row++ ) {
         for ( var col = 0 ; col < _cells.GetLength( 1 ) ; col++ ) {
-          _cells[ row, col ] = new List<Node2D>() ;
+          _cells[ row, col ] = new List<Boid>() ;
         }
       }
     }
 
     [MethodImpl( MethodImplOptions.AggressiveInlining )]
-    private Vector2 ScalePoint( Vector2 unscalePoint )
+    public Vector2 ScalePoint( Vector2 unscalePoint )
     {
-      var scalePoint = ( unscalePoint / _scaleDownFactor ).Floor() ;
-      scalePoint.x = Mathf.Clamp( scalePoint.x, 0, _gridSize.x ) ;
-      scalePoint.y = Mathf.Clamp( scalePoint.y, 0, _gridSize.y ) ;
+      var scalePoint = ( unscalePoint / ScaleDownFactor ).Floor() ;
+      scalePoint.x = Mathf.Clamp( scalePoint.x, 0, GridSize.x ) ;
+      scalePoint.y = Mathf.Clamp( scalePoint.y, 0, GridSize.y ) ;
       return scalePoint ;
     }
 
     [MethodImpl( MethodImplOptions.AggressiveInlining )]
-    private List<Node2D> GetBodies( Vector2 scaledPoint ) => _cells[ (int) scaledPoint.x, (int) scaledPoint.y ] ;
+    private List<Boid> GetBodies( Vector2 scaledPoint ) => _cells[ (int) Mathf.Clamp( scaledPoint.x, 0, _cells.GetLength( 0 ) ), (int) Mathf.Clamp( scaledPoint.y, 0, _cells.GetLength( 1 ) ) ] ;
 
-    public void AddBody( Node2D body, Vector2 unscaledPoint )
+    public void AddBody( Boid body, Vector2 unscaledPoint )
     {
       var scaledPoint = ScalePoint( unscaledPoint ) ;
       GetBodies( scaledPoint ).Add( body ) ;
     }
 
-    public List<List<Node2D>> GetBodiesAround( Vector2 unscaledPoint )
+    public List<List<Boid>> GetBodiesAround( Vector2 unscaledPoint )
     {
       var scaledPoint = ScalePoint( unscaledPoint ) ;
-      return new HashSet<List<Node2D>>
+      return new HashSet<List<Boid>>
       {
         GetBodies( scaledPoint ),
         GetBodies( scaledPoint + Vector2.Up ),

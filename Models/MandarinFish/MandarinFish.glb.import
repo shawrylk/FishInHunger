@@ -2,12 +2,12 @@
 
 importer="scene"
 type="PackedScene"
-path="res://.import/MandarinFish.glb-ddb5521d808b831bf076a6dd8c75d2f5.scn"
+path="res://.import/MandarinFish.glb-419c4dc40ffbe94004650e6562a9ba72.scn"
 
 [deps]
 
-source_file="res://Models/MandarinFish.glb"
-dest_files=[ "res://.import/MandarinFish.glb-ddb5521d808b831bf076a6dd8c75d2f5.scn" ]
+source_file="res://Models/MandarinFish/MandarinFish.glb"
+dest_files=[ "res://.import/MandarinFish.glb-419c4dc40ffbe94004650e6562a9ba72.scn" ]
 
 [params]
 

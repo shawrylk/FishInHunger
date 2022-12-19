@@ -1,5 +1,6 @@
 using Godot ;
 using System.Collections.Generic ;
+using Fish.Utilities ;
 
 public class Player : KinematicBody
 {
@@ -31,8 +32,7 @@ public class Player : KinematicBody
 
   public override void _PhysicsProcess( float delta )
   {
-    var moveDirection = Move() ;
-    Flip( moveDirection ) ;
+    Move().Flip( _graphics, RaisedDegrees ) ;
     base._PhysicsProcess( delta ) ;
   }
 
