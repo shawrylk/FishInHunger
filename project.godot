@@ -14,6 +14,14 @@ config/name="Fish"
 run/main_scene="res://Scenes/World.tscn"
 config/icon="res://icon.png"
 
+[display]
+
+window/vsync/use_vsync=false
+
+[global]
+
+physic=false
+
 [gui]
 
 common/drop_mouse_on_gui_input_disabled=true
@@ -60,7 +68,7 @@ project/assembly_name="Fish"
 
 [physics]
 
-common/enable_pause_aware_picking=true
+common/physics_jitter_fix=400.0
 
 [rendering]
 

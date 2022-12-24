@@ -1,6 +1,7 @@
 using System.Collections.Generic ;
 using System.Drawing ;
 using System.Linq ;
+using System.Threading.Tasks ;
 using Godot ;
 
 namespace Fish.Utilities
@@ -8,7 +9,7 @@ namespace Fish.Utilities
   public class RandomSpawn : Node
   {
     [Export]
-    private int _startingBoidsCount = 100 ;
+    private int _startingBoidsCount = 2000 ;
 
     [Export]
     private PackedScene _boidScene ;
@@ -38,7 +39,7 @@ namespace Fish.Utilities
     {
       for ( var i = 0 ; i < _startingBoidsCount ; i++ ) {
         GD.Randomize() ;
-        var boid = _boidScene.Instance() as Boid;
+        var boid = _boidScene.Instance() as Boid ;
         var initialPosition = new Vector3( GD.Randf() * _screenSize.x, GD.Randf() * _screenSize.y, 0 ) ;
         boid.Translation = initialPosition ;
         boid.AddToGroup( BoidsGroupName ) ;
@@ -79,8 +80,11 @@ namespace Fish.Utilities
     private void ProcessBoids( float delta )
     {
       for ( var groupIndex = 0 ; groupIndex < _computeGroup ; groupIndex++ ) {
-        ProcessGroup( delta, groupIndex ) ;
+        var index = groupIndex ;
+        Task.Run( () => { ProcessGroup( delta, index ) ; } ) ;
       }
+
+      // Parallel.ForEach( Enumerable.Range( 0, _computeGroup ).ToList(), index => ProcessGroup( delta, index ) ) ;
     }
 
     private void ProcessGroup( float delta, int groupIndex )
@@ -88,6 +92,7 @@ namespace Fish.Utilities
       var start = _boids.Count / _computeGroup * groupIndex ;
       var end = start + _boids.Count / _computeGroup + ( groupIndex + 1 == _boids.Count ? _boids.Count % _computeGroup : 0 ) ;
       for ( var i = start ; i < end ; i++ ) _boids[ i ]._Process( delta ) ;
+      // Parallel.ForEach( Enumerable.Range( start, end ).ToList(), index => _boids[ index ]._Process( delta ) ) ;
     }
   }
 }

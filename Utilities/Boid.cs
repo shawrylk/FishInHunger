@@ -37,12 +37,17 @@ namespace Fish.Utilities
     private float _screenAvoidForce = 1f ;
 
     private const string GraphicsPath = "Graphics" ;
+    private const string VisibilityNotifierPath = "VisibilityNotifier" ;
+    private const string ScreenEnteredEventName = "screen_entered" ;
+    private const string ScreenExitedEventName = "screen_exited" ;
     private Vector2 _screenSize ;
     private bool _stayOnScreen = true ;
     private int _flockSize = 0 ;
     private List<Vector3> _targets = new List<Vector3>() ;
     private Spatial _graphics ;
-    private float _raiseDegrees ;
+    private VisibilityNotifier _visibilityNotifier ;
+    private float _raiseDegreesX ;
+    private float _raiseDegreesZ ;
     public List<List<Boid>> Flock { get ; set ; }
     public Vector3 Velocity { get ; private set ; }
 
@@ -50,13 +55,32 @@ namespace Fish.Utilities
     {
       _screenSize = GetViewport().Size ;
       _graphics = GetNode<Spatial>( GraphicsPath ) ;
+      _visibilityNotifier = GetNode<VisibilityNotifier>( VisibilityNotifierPath ) ;
+      if ( _visibilityNotifier != null ) {
+        _visibilityNotifier.Connect( ScreenEnteredEventName, this, nameof( Show ) ) ;
+        _visibilityNotifier.Connect( ScreenExitedEventName, this, nameof( Hide ) ) ;
+        Visible = false ;
+      }
+
       GD.Randomize() ;
-      _raiseDegrees = (float) GD.RandRange( 20, 40 ) ;
+      _raiseDegreesX = (float) GD.RandRange( 10, 60 ) ;
+      GD.Randomize() ;
+      _raiseDegreesZ = (float) GD.RandRange( 5, 30 ) ;
       Velocity = new Vector3( (float) GD.RandRange( -1d, 1d ), (float) GD.RandRange( -1d, 1d ), 0 ).Floor() * _maxSpeed ;
       base._Ready() ;
     }
 
-    public override void _Process( float delta )
+    private void Show()
+    {
+      Visible = true ;
+    }
+
+    private void Hide()
+    {
+      Visible = true ;
+    }
+
+    public override void _PhysicsProcess( float delta )
     {
       Translation += Velocity * delta ;
       var screenAvoidVector = Vector3.Zero ;
@@ -75,8 +99,8 @@ namespace Fish.Utilities
 
       Velocity = ( Velocity + additionalVelocity ).LimitLength( _maxSpeed ) ;
       if ( Velocity.Length() < _minSpeed ) ( Velocity * _minSpeed ).LimitLength( _maxSpeed ) ;
-      Velocity.Flip( _graphics, _raiseDegrees ) ;
-      base._Process( delta ) ;
+      Velocity.Flip( _graphics, _raiseDegreesX, _raiseDegreesZ ) ;
+      base._PhysicsProcess( delta ) ;
     }
 
     private Vector3 AvoidScreenEdge()
