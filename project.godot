@@ -68,7 +68,7 @@ project/assembly_name="Fish"
 
 [physics]
 
-common/physics_jitter_fix=400.0
+common/physics_jitter_fix=1.0
 
 [rendering]
 
