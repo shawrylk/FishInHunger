@@ -16,11 +16,22 @@ config/icon="res://icon.png"
 
 [display]
 
-window/vsync/use_vsync=false
+window/size/width=2160
+window/size/height=1080
+window/size/borderless=true
+window/size/test_width=1024
+window/size/test_height=512
+window/stretch/aspect="keep"
 
 [global]
 
 physic=false
+"enable import"=true
+"Import etc"=true
+etc=false
+"import etc"=false
+fps=true
+process=false
 
 [gui]
 
@@ -59,7 +70,6 @@ ui_down={
 ui_dash={
 "deadzone": 0.5,
 "events": [ Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"pressed":false,"scancode":32,"physical_scancode":0,"unicode":0,"echo":false,"script":null)
-, Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"button_mask":0,"position":Vector2( 0, 0 ),"global_position":Vector2( 0, 0 ),"factor":1.0,"button_index":1,"pressed":false,"doubleclick":false,"script":null)
  ]
 }
 
@@ -69,7 +79,8 @@ project/assembly_name="Fish"
 
 [physics]
 
-common/physics_jitter_fix=1.0
+common/physics_jitter_fix=400.0
+common/physics_interpolation=true
 
 [rendering]
 

@@ -1,11 +1,12 @@
 using Godot ;
 using System ;
+using Fish.Utilities ;
 
 public class Dash : Spatial
 {
   private const string DurationTimerPath = "DurationTimer" ;
-  private const string TimeOutEventName = "timeout" ;
   private Timer _durationTimer ;
+
   private bool _canDash = true ;
   // private PackedScene _dashEffectResource ;
 
@@ -15,14 +16,14 @@ public class Dash : Spatial
     private set => _canDash = value ;
   }
 
-  private const float DashDelay = 0.4f ;
+  private const float DashDelay = 1f ;
   public bool IsDashing => ! _durationTimer.IsStopped() ;
 
   public override void _Ready()
   {
     _durationTimer = GetNode<Timer>( DurationTimerPath ) ;
     _durationTimer.OneShot = true ;
-    _durationTimer.Connect( TimeOutEventName, this, nameof( OnDurationTimer_TimeOut ) ) ;
+    _durationTimer.Connect( TimerExtensions.TimeOutEventName, this, nameof( OnDurationTimer_TimeOut ) ) ;
     base._Ready() ;
   }
 
@@ -35,7 +36,7 @@ public class Dash : Spatial
   private async void EndDash()
   {
     CanDash = false ;
-    await ToSignal( GetTree().CreateTimer( DashDelay ), TimeOutEventName ) ;
+    await this.Wait( DashDelay ) ;
     CanDash = true ;
   }
 

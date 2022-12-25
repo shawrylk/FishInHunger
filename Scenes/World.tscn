@@ -28,9 +28,6 @@ __meta__ = {
 
 [node name="Player" parent="." instance=ExtResource( 1 )]
 
-[node name="Spatial" parent="." instance=ExtResource( 3 )]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 0 )
-
 [node name="RandomSpawn" type="Node" parent="."]
 script = ExtResource( 4 )
 _boidScene = ExtResource( 3 )
@@ -39,6 +36,7 @@ _boidScene = ExtResource( 3 )
 unique_name_in_owner = true
 
 [node name="GIProbe" type="GIProbe" parent="."]
-extents = Vector3( 500, 500, 10 )
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 50, 50, 0 )
+extents = Vector3( 100, 100, 10 )
 propagation = 1.0
 data = SubResource( 1 )

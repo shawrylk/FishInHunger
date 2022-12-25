@@ -9,7 +9,7 @@ namespace Fish.Utilities
     [Export]
     private int _startingBoidsCount = 100 ;
 
-
+#pragma warning disable CS0649
     [Export]
     private PackedScene _boidScene ;
 
@@ -19,17 +19,21 @@ namespace Fish.Utilities
     private Vector2 _screenSize ;
     private BoidAccelerateStructure2D _accelStruct ;
     private readonly List<Boid> _boids = new List<Boid>() ;
+
     private Node _boidsNode ;
-    private GridMap _gridNode ;
+
+    // private GridMap _gridNode ;
     private const string BoidsGroupName = "Boids" ;
+
     private const string BoidsNodePath = "Boids" ;
-    private const string GridMapPath = "Grid" ;
+    // private const string GridMapPath = "GridMap" ;
 
     public override void _Ready()
     {
-      _screenSize = GetViewport().Size ;
+      _screenSize = GraphicsExtensions.GameWorldScreenSize ;
+      // _screenSize = GetViewport().Size ;
       _boidsNode = GetParent().GetNode<Node>( BoidsNodePath ) ;
-      _gridNode = GetNode<GridMap>( GridMapPath ) ;
+      // _gridNode = GetNode<GridMap>( GridMapPath ) ;
       InitBoids() ;
       base._Ready() ;
     }

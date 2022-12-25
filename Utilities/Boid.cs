@@ -22,7 +22,7 @@ namespace Fish.Utilities
     private float _alignment = 0.3f ;
 
     [Export]
-    private float _separation = 1.3f ;
+    private float _separation = 1.7f ;
 
     [Export]
     public float ViewDistance = 5f ;
@@ -34,7 +34,7 @@ namespace Fish.Utilities
     private int _maxFlockSize = 10 ;
 
     [Export]
-    private float _screenAvoidForce = 2f ;
+    private float _screenAvoidForce = 1f ;
 
     private const string GraphicsPath = "Graphics" ;
     private const string AnimationPlayerPath = "Graphics/AnimationPlayer" ;
@@ -56,7 +56,8 @@ namespace Fish.Utilities
 
     public override void _Ready()
     {
-      _screenSize = GetViewport().Size ;
+      // _screenSize = GetViewport().Size ;
+      _screenSize = GraphicsExtensions.GameWorldScreenSize ;
       _graphics = GetNode<Spatial>( GraphicsPath ) ;
       _animationPlayer = GetNode<AnimationPlayer>( AnimationPlayerPath ) ;
       _animationPlayer.Play( AnimationSwimmingFastName ) ;
@@ -105,7 +106,7 @@ namespace Fish.Utilities
         additionalVelocity += targetVector * _targetForce ;
       }
 
-      Velocity = ( Velocity + additionalVelocity ).LimitLength( _maxSpeed ) ;
+      Velocity = Velocity.LinearInterpolate( Velocity + additionalVelocity, 0.2f ).LimitLength( _maxSpeed ) ;
       if ( Velocity.Length() < _minSpeed ) ( Velocity * _minSpeed ).LimitLength( _maxSpeed ) ;
       Velocity.Flip( _graphics, _raiseDegreesX, _raiseDegreesZ ) ;
       base._PhysicsProcess( delta ) ;

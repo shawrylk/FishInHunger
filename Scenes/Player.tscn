@@ -13,7 +13,7 @@ script = ExtResource( 2 )
 shape = SubResource( 1 )
 
 [node name="Camera" type="Camera" parent="."]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 30 )
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 20 )
 
 [node name="Graphics" parent="." instance=ExtResource( 1 )]
 unique_name_in_owner = true
