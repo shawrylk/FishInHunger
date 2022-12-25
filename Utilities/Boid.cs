@@ -45,7 +45,7 @@ namespace Fish.Utilities
     private Vector2 _screenSize ;
     private bool _stayOnScreen = true ;
     private int _flockSize = 0 ;
-    private List<Vector3> _targets = new List<Vector3>() ;
+    private readonly List<Vector3> _targets = new List<Vector3>() ;
     private Spatial _graphics ;
     private VisibilityNotifier _visibilityNotifier ;
     private AnimationPlayer _animationPlayer ;
@@ -65,8 +65,8 @@ namespace Fish.Utilities
       _animationPlayer.PlaybackSpeed = (float) GD.RandRange( 2.5d, 3d ) ;
       _visibilityNotifier = GetNode<VisibilityNotifier>( VisibilityNotifierPath ) ;
       if ( _visibilityNotifier != null ) {
-        _visibilityNotifier.Connect( ScreenEnteredEventName, this, nameof( Show ) ) ;
-        _visibilityNotifier.Connect( ScreenExitedEventName, this, nameof( Hide ) ) ;
+        _visibilityNotifier.Connect( ScreenEnteredEventName, this, nameof( ShowBoid ) ) ;
+        _visibilityNotifier.Connect( ScreenExitedEventName, this, nameof( HideBoid ) ) ;
         Visible = false ;
       }
 
@@ -78,12 +78,12 @@ namespace Fish.Utilities
       base._Ready() ;
     }
 
-    private void Show()
+    private void ShowBoid()
     {
       Visible = true ;
     }
 
-    private void Hide()
+    private void HideBoid()
     {
       Visible = true ;
     }

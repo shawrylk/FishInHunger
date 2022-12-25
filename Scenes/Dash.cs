@@ -7,7 +7,7 @@ public class Dash : Spatial
   private const string TimeOutEventName = "timeout" ;
   private Timer _durationTimer ;
   private bool _canDash = true ;
-  private PackedScene _dashEffectResource ;
+  // private PackedScene _dashEffectResource ;
 
   public bool CanDash
   {
