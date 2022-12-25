@@ -1,3 +1,4 @@
+using System ;
 using Godot ;
 using System.Collections.Generic ;
 using Fish.Utilities ;
@@ -6,8 +7,9 @@ public class Player : KinematicBody
 {
   private const string AnimationPlayerPath = "Graphics/AnimationPlayer" ;
   private const string GraphicsPath = "Graphics" ;
+  private const string CameraPath = "Camera" ;
   private const string DashPath = "Dash" ;
-  private const float MoveSpeed = 30f ;
+  private const float MoveSpeed = 60f ;
   private const float DashDuration = .1f ;
   private const float DashMultiplier = 3f ;
   private const float RaisedDegreesX = 35f ;
@@ -15,8 +17,11 @@ public class Player : KinematicBody
   private AnimationPlayer _animationPlayer ;
   private Spatial _graphics ;
   private Dash _dash ;
+  private Camera _camera ;
+  private Func<Vector2> _getMouseDirection ;
+  private Action<Vector2> _setMouseDirection ;
 
-  private readonly List<(string, Vector3)> _actionInfo = new List<(string, Vector3)>()
+  private static readonly List<(string, Vector3)> ActionInfo = new List<(string, Vector3)>()
   {
     ( "ui_right", new Vector3( 1, 0, 0 ) ),
     ( "ui_left", new Vector3( -1, 0, 0 ) ),
@@ -29,6 +34,9 @@ public class Player : KinematicBody
     _animationPlayer = GetNode<AnimationPlayer>( AnimationPlayerPath ) ;
     _graphics = GetNode<Spatial>( GraphicsPath ) ;
     _dash = GetNode<Dash>( DashPath ) ;
+    _camera = GetNode<Camera>( CameraPath ) ;
+    Input.MouseMode = Input.MouseModeEnum.Captured ;
+    ( _getMouseDirection, _setMouseDirection ) = GetMouseHelperFunction() ;
   }
 
   public override void _PhysicsProcess( float delta )
@@ -37,12 +45,57 @@ public class Player : KinematicBody
     base._PhysicsProcess( delta ) ;
   }
 
+  private static (Func<Vector2> get, Action<Vector2> set) GetMouseHelperFunction()
+  {
+    Vector2? lastMouseDirection = null ;
+
+    Vector2 GetDirection()
+    {
+      var result = lastMouseDirection ?? Vector2.Zero ;
+      lastMouseDirection = null ;
+      return result ;
+    }
+
+    void SetDirection( Vector2 newDirection )
+    {
+      lastMouseDirection = newDirection ;
+    }
+
+    return ( GetDirection, SetDirection ) ;
+  }
+
+  public override void _UnhandledInput( InputEvent @event )
+  {
+    if ( @event is InputEventMouseMotion eventMouseMotion ) {
+      _setMouseDirection( eventMouseMotion.Relative ) ;
+    }
+
+    base._UnhandledInput( @event ) ;
+  }
+
   private Vector3 Move()
   {
-    var moveDirection = Vector3.Zero ;
-    foreach ( var (action, direction) in _actionInfo ) {
-      if ( Input.IsActionPressed( action ) ) moveDirection += direction ;
+    static Vector3 KeyboardHandler()
+    {
+      var moveDirection = Vector3.Zero ;
+      foreach ( var (action, direction) in ActionInfo ) {
+        if ( Input.IsActionPressed( action ) ) moveDirection += direction ;
+      }
+
+      return moveDirection ;
     }
+
+    static Vector3 MouseHandler( Player player )
+    {
+      // var mousePosition = player.GetViewport().GetMousePosition() ;
+      // var playerPosition = player._camera.UnprojectPosition( player.GlobalTransform.origin ) ;
+      // var direction = ( mousePosition - playerPosition ).Normalized() ;
+      // return new Vector3( direction.x, -direction.y, 0 ) ;
+      var direction = player._getMouseDirection().Normalized() ;
+      return new Vector3( direction.x, -direction.y, 0 ) ;
+    }
+
+    var moveDirection = KeyboardHandler() + MouseHandler( this ) ;
 
     if ( Input.IsActionPressed( "ui_dash" ) && _dash.CanDash ) _dash.StartDash( DashDuration ) ;
     var moveSpeed = MoveSpeed ;

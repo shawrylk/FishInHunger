@@ -1,6 +1,4 @@
 using System.Collections.Generic ;
-using System.Drawing ;
-using System.Linq ;
 using System.Threading.Tasks ;
 using Godot ;
 
@@ -9,7 +7,7 @@ namespace Fish.Utilities
   public class RandomSpawn : Node
   {
     [Export]
-    private int _startingBoidsCount = 2000 ;
+    private int _startingBoidsCount = 500 ;
 
     [Export]
     private PackedScene _boidScene ;
@@ -19,7 +17,7 @@ namespace Fish.Utilities
 
     private Vector2 _screenSize ;
     private BoidAccelerateStructure2D _accelStruct ;
-    private List<Boid> _boids = new List<Boid>() ;
+    private readonly List<Boid> _boids = new List<Boid>() ;
     private Node _boidsNode ;
     private GridMap _gridNode ;
     private const string BoidsGroupName = "Boids" ;
@@ -39,7 +37,7 @@ namespace Fish.Utilities
     {
       for ( var i = 0 ; i < _startingBoidsCount ; i++ ) {
         GD.Randomize() ;
-        var boid = _boidScene.Instance() as Boid ;
+        if ( ! ( _boidScene.Instance() is Boid boid ) ) return ;
         var initialPosition = new Vector3( GD.Randf() * _screenSize.x, GD.Randf() * _screenSize.y, 0 ) ;
         boid.Translation = initialPosition ;
         boid.AddToGroup( BoidsGroupName ) ;
