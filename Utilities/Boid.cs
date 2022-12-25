@@ -7,10 +7,10 @@ namespace Fish.Utilities
   public class Boid : Spatial
   {
     [Export]
-    private float _maxSpeed = 12 ;
+    private float _maxSpeed = 18 ;
 
     [Export]
-    private float _minSpeed = 8 ;
+    private float _minSpeed = 12 ;
 
     [Export]
     private float _targetForce = 0.3f ;

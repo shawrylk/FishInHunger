@@ -1,80 +1,45 @@
 using System ;
 using Godot ;
 using System.Collections.Generic ;
+using System.Linq ;
 using System.Threading.Tasks ;
 using Fish.Utilities ;
 
 public class Player : KinematicBody
 {
-  private const string AnimationPlayerPath = "Graphics/AnimationPlayer" ;
-  private const string AnimationSwimmingFastName = "Swimming_Fast" ;
-
-  private const string AnimationSwimmingImpulseName = "Swimming_Impulse" ;
-
-  // private const string AnimationAttackName = "Attack" ;
-  private const string AnimationFinishedEventName = "animation_finished" ;
-
-  private const string GraphicsPath = "Graphics" ;
-
-  // private const string CameraPath = "Camera" ;
-  private const string DashPath = "Dash" ;
-  private const float MoveSpeed = 30f ;
-  private const float DashDuration = .1f ;
-  private const float DashMultiplier = 3f ;
-  private const float RaisedDegreesX = 35f ;
-  private const float RaisedDegreesZ = 25f ;
-  private AnimationPlayer _animationPlayer ;
-  private Spatial _graphics ;
-
-  private Dash _dash ;
-
-  // private Camera _camera ;
-  private Func<Vector2> _getMouseDirection ;
-  private Action<Vector2> _setMouseDirection ;
-
-  private static readonly List<(string, Vector3)> ActionInfo = new List<(string, Vector3)>()
-  {
-    ( "ui_right", new Vector3( 1, 0, 0 ) ),
-    ( "ui_left", new Vector3( -1, 0, 0 ) ),
-    ( "ui_up", new Vector3( 0, 1, 0 ) ),
-    ( "ui_down", new Vector3( 0, -1, 0 ) ),
-  } ;
+  private readonly IList<PlayerInputHandler> _playerActionHandlers = new List<PlayerInputHandler>() ;
+  private PlayerMovementHandler _movementHandler ;
+  private AnimationHandler _animationHandler ;
 
   public override void _Ready()
   {
-    _animationPlayer = GetNode<AnimationPlayer>( AnimationPlayerPath ) ;
-    _animationPlayer.Play( AnimationSwimmingFastName ) ;
-    _animationPlayer.GetAnimation( AnimationSwimmingFastName ).Loop = true ;
-    _graphics = GetNode<Spatial>( GraphicsPath ) ;
-    _dash = GetNode<Dash>( DashPath ) ;
-    // _camera = GetNode<Camera>( CameraPath ) ;
-    Input.MouseMode = Input.MouseModeEnum.Captured ;
-    ( _getMouseDirection, _setMouseDirection ) = GetMouseHelperFunction() ;
+    _movementHandler = new PlayerMovementHandler( this ) ;
+    _animationHandler = new AnimationHandler( this ) ;
+    _playerActionHandlers.Add( new KeyboardHandler() ) ;
+    _playerActionHandlers.Add( new TouchHandler() ) ;
+    // Because touch action on Mobile conflicts with mouse, and I don't know what will happen to Desktop has touch support,
+    // So it will be check later if bug occurs
+    if ( OS.GetName() != "Android" && OS.GetName() != "iOS" ) {
+      _playerActionHandlers.Add( new MouseHandler() ) ;
+    }
   }
 
   public override void _PhysicsProcess( float delta )
   {
-    Move().Flip( _graphics, RaisedDegreesX, RaisedDegreesZ ) ;
+    var toDirection = _playerActionHandlers.Aggregate( Vector3.Zero, ( current, handler ) => current + handler.GetMovementDirection() ) ;
+    var doDash = _playerActionHandlers.Any( handler => PlayerInputHandler.IsActionPressed() ) ;
+    var moveDirection = _movementHandler.MoveAndFlip( toDirection, doDash ) ;
+    _animationHandler.UpdateAnimation( moveDirection, _movementHandler.IsDashing ) ;
     base._PhysicsProcess( delta ) ;
   }
 
-  private static (Func<Vector2> get, Action<Vector2> set) GetMouseHelperFunction()
+  public override void _UnhandledInput( InputEvent @event )
   {
-    Vector2? lastMouseDirection = null ;
-
-    Vector2 GetDirection()
-    {
-      var result = lastMouseDirection ?? Vector2.Zero ;
-      lastMouseDirection = null ;
-      return result ;
+    foreach ( var playerActionHandler in _playerActionHandlers ) {
+      playerActionHandler.UnhandledInput( @event ) ;
     }
 
-    void SetDirection( Vector2 newDirection )
-    {
-      lastMouseDirection = newDirection ;
-    }
-
-    return ( GetDirection, SetDirection ) ;
+    base._UnhandledInput( @event ) ;
   }
 
 // #if DEBUG
@@ -85,77 +50,112 @@ public class Player : KinematicBody
 //   }
 // #endif
 
-  private Vector2 _lastTouchPosition ;
-  private DateTime _lastTouchTime ;
-
-  private void CreatePseudoDashActionWithTask()
+  private abstract class PlayerInputHandler
   {
-    _ = Task.Run( async () =>
+    private const string DashActionName = "ui_dash" ;
+
+    protected static async void CreatePseudoDashActionWithTask()
     {
-      GD.Print( "ui_dash press" ) ;
-      Input.ActionPress( "ui_dash" ) ;
-      await this.Wait( 0.1f ) ;
-      GD.Print( "ui_dash release" ) ;
-      Input.ActionRelease( "ui_dash" ) ;
-    } ) ;
+      Input.ActionPress( DashActionName ) ;
+      await Task.Delay( TimeSpan.FromSeconds( 0.1f ) ) ;
+      Input.ActionRelease( DashActionName ) ;
+    }
+
+    public virtual void UnhandledInput( InputEvent @event )
+    {
+    }
+
+    public virtual Vector3 GetMovementDirection() => Vector3.Zero ;
+    public static bool IsActionPressed() => Input.IsActionPressed( DashActionName ) ;
   }
 
-  public override async void _UnhandledInput( InputEvent @event )
+  private class MouseHandler : PlayerInputHandler
   {
-    switch ( @event ) {
-      case InputEventMouseMotion eventMouseMotion :
-        _setMouseDirection( eventMouseMotion.Relative ) ;
-        break ;
-      case InputEventMouseButton { Doubleclick: true } :
-        CreatePseudoDashActionWithTask() ;
-        break ;
-      case InputEventScreenTouch eventScreenTouch :
-        if ( eventScreenTouch.Pressed && eventScreenTouch.Index == 0 ) {
-          _lastTouchPosition = eventScreenTouch.Position ;
-        }
+    private Vector2? _lastMouseDirection ;
 
-        if ( eventScreenTouch.Pressed && eventScreenTouch.Index == 1 ) {
-          var now = DateTime.Now ;
-          if ( now - _lastTouchTime < TimeSpan.FromSeconds( 0.5f ) ) CreatePseudoDashActionWithTask() ;
-          _lastTouchTime = now ;
-        }
-
-        break ;
-      case InputEventScreenDrag eventScreenDrag :
-        _setMouseDirection( eventScreenDrag.Position - _lastTouchPosition ) ;
-        break ;
+    public MouseHandler()
+    {
+      Input.MouseMode = Input.MouseModeEnum.Captured ;
     }
 
-    base._UnhandledInput( @event ) ;
+    public override void UnhandledInput( InputEvent @event )
+    {
+      switch ( @event ) {
+        case InputEventMouseMotion eventMouseMotion :
+          _lastMouseDirection = eventMouseMotion.Relative ;
+          break ;
+        case InputEventMouseButton { Pressed: true } :
+          CreatePseudoDashActionWithTask() ;
+          break ;
+      }
+    }
+
+    private Vector2 GetDirection()
+    {
+      var result = _lastMouseDirection ?? Vector2.Zero ;
+      _lastMouseDirection = null ;
+      return result ;
+    }
+
+    public override Vector3 GetMovementDirection()
+    {
+      var direction = GetDirection().Normalized() ;
+      return new Vector3( direction.x, -direction.y, 0 ) ;
+    }
   }
 
-  private Vector3 _moveDirection ;
-
-  private Vector3 Move()
+  private class TouchHandler : PlayerInputHandler
   {
-    _moveDirection = _moveDirection.LinearInterpolate( KeyboardHandler() + MouseHandler( this ), 0.2f ) ;
-    // To simulate that fish swims faster when moving
-    _animationPlayer.PlaybackSpeed = _moveDirection == Vector3.Zero ? 1f : 2f ;
+    private Vector2 _lastTouchPosition ;
+    private DateTime _lastTouchTime ;
+    private Vector2? _lastMouseDirection ;
 
-    if ( Input.IsActionPressed( "ui_dash" ) && _dash.CanDash ) {
-      _dash.StartDash( DashDuration ) ;
-      _animationPlayer.Play( AnimationSwimmingImpulseName ) ;
-      if ( ! _animationPlayer.IsConnected( AnimationFinishedEventName, this, nameof( OnAnimationFinished ) ) )
-        _animationPlayer.Connect( AnimationFinishedEventName, this, nameof( OnAnimationFinished ) ) ;
+    public override void UnhandledInput( InputEvent @event )
+    {
+      switch ( @event ) {
+        case InputEventScreenTouch eventScreenTouch :
+          if ( eventScreenTouch.Pressed && eventScreenTouch.Index == 0 ) {
+            _lastTouchPosition = eventScreenTouch.Position ;
+          }
+
+          if ( eventScreenTouch.Pressed && eventScreenTouch.Index == 1 ) {
+            var now = DateTime.Now ;
+            if ( now - _lastTouchTime < TimeSpan.FromSeconds( 0.5f ) ) CreatePseudoDashActionWithTask() ;
+            _lastTouchTime = now ;
+          }
+
+          break ;
+        case InputEventScreenDrag eventScreenDrag :
+          _lastMouseDirection = eventScreenDrag.Position - _lastTouchPosition ;
+          break ;
+      }
     }
 
-    var moveSpeed = MoveSpeed ;
-    if ( _dash.IsDashing ) {
-      moveSpeed *= DashMultiplier ;
-      // Limit vertical movement because I think fish can not move quickly in vertical
-      var maxY = Mathf.Abs( Mathf.Sin( Mathf.Deg2Rad( RaisedDegreesX ) ) ) ;
-      _moveDirection = new Vector3( _moveDirection.x, Mathf.Clamp( _moveDirection.y, -maxY, maxY ), _moveDirection.z ) ;
+    private Vector2 GetDirection()
+    {
+      var result = _lastMouseDirection ?? Vector2.Zero ;
+      _lastMouseDirection = null ;
+      return result ;
     }
 
-    MoveAndSlide( _moveDirection * moveSpeed, Vector3.Up ) ;
-    return _moveDirection ;
+    public override Vector3 GetMovementDirection()
+    {
+      var direction = GetDirection().Normalized() ;
+      return new Vector3( direction.x, -direction.y, 0 ) ;
+    }
+  }
 
-    static Vector3 KeyboardHandler()
+  private class KeyboardHandler : PlayerInputHandler
+  {
+    private static readonly List<(string, Vector3)> ActionInfo = new List<(string, Vector3)>()
+    {
+      ( "ui_right", new Vector3( 1, 0, 0 ) ),
+      ( "ui_left", new Vector3( -1, 0, 0 ) ),
+      ( "ui_up", new Vector3( 0, 1, 0 ) ),
+      ( "ui_down", new Vector3( 0, -1, 0 ) ),
+    } ;
+
+    public override Vector3 GetMovementDirection()
     {
       var moveDirection = Vector3.Zero ;
       foreach ( var (action, direction) in ActionInfo ) {
@@ -164,18 +164,88 @@ public class Player : KinematicBody
 
       return moveDirection ;
     }
+  }
 
-    static Vector3 MouseHandler( Player player )
+  private class PlayerMovementHandler
+  {
+    private const string GraphicsPath = "Graphics" ;
+    private const float MoveSpeed = 30f ;
+    private const float DashDuration = .05f ;
+    private const float DashMultiplier = 3f ;
+    private const float RaisedDegreesX = 35f ;
+    private const float RaisedDegreesZ = 25f ;
+    private readonly KinematicBody _owner ;
+    private const string DashPath = "Dash" ;
+    private Vector3 _moveDirection ;
+    private readonly Dash _dash ;
+    private Spatial _graphics ;
+    private const float InterpolateWeight = 0.2f ;
+    public bool IsDashing { get ; private set ; }
+
+    public PlayerMovementHandler( KinematicBody owner )
     {
-      var direction = player._getMouseDirection().Normalized() ;
-      return new Vector3( direction.x, -direction.y, 0 ) ;
+      _owner = owner ;
+      _dash = owner.GetNode<Dash>( DashPath ) ;
+      _graphics = owner.GetNode<Spatial>( GraphicsPath ) ;
+    }
+
+    private Vector3 Move( Vector3 toDirection, bool doDash )
+    {
+      IsDashing = false ;
+      _moveDirection = _moveDirection.LinearInterpolate( toDirection, InterpolateWeight ) ;
+
+      if ( doDash && _dash.CanDash ) {
+        IsDashing = true ;
+        _dash.StartDash( DashDuration ) ;
+      }
+
+      var moveSpeed = MoveSpeed ;
+      if ( _dash.IsDashing ) {
+        moveSpeed *= DashMultiplier ;
+        // Limit vertical movement because I think fish can not move quickly in vertical
+        var maxY = Mathf.Abs( Mathf.Sin( Mathf.Deg2Rad( RaisedDegreesX ) ) ) ;
+        _moveDirection = new Vector3( _moveDirection.x, Mathf.Clamp( _moveDirection.y, -maxY, maxY ), _moveDirection.z ) ;
+      }
+
+      _owner.MoveAndSlide( _moveDirection * moveSpeed, Vector3.Up ) ;
+      return _moveDirection ;
+    }
+
+    public Vector3 MoveAndFlip( Vector3 toDirection, bool doDash )
+    {
+      var movementVector = Move( toDirection, doDash ) ;
+      movementVector.Flip( _graphics, RaisedDegreesX, RaisedDegreesZ ) ;
+      return movementVector ;
     }
   }
 
-  private void OnAnimationFinished( string animationName )
+  private class AnimationHandler
   {
-    _animationPlayer.Disconnect( AnimationFinishedEventName, this, nameof( OnAnimationFinished ) ) ;
-    _animationPlayer.Play( AnimationSwimmingFastName ) ;
-    _animationPlayer.GetAnimation( AnimationSwimmingFastName ).Loop = true ;
+    private readonly Node _owner ;
+    private const string AnimationPlayerPath = "Graphics/AnimationPlayer" ;
+    private const string AnimationSwimmingFastName = "Swimming_Fast" ;
+    private const string AnimationSwimmingImpulseName = "Attack" ;
+    private const string AnimationFinishedEventName = "animation_finished" ;
+
+    private readonly AnimationPlayer _animationPlayer ;
+
+    public AnimationHandler( Node owner )
+    {
+      _owner = owner ;
+
+      _animationPlayer = owner.GetNode<AnimationPlayer>( AnimationPlayerPath ) ;
+      _animationPlayer.Play( AnimationSwimmingFastName ) ;
+      _animationPlayer.GetAnimation( AnimationSwimmingFastName ).Loop = true ;
+    }
+
+    public void UpdateAnimation( Vector3 moveDirection, bool isDashing )
+    {
+      // To simulate that fish swims faster when moving
+      _animationPlayer.PlaybackSpeed = moveDirection == Vector3.Zero ? 1f : 1.3f ;
+      if ( isDashing ) _animationPlayer.Play( AnimationSwimmingImpulseName ) ;
+      if ( _animationPlayer.IsPlaying() ) return ;
+      _animationPlayer.Play( AnimationSwimmingFastName ) ;
+      _animationPlayer.GetAnimation( AnimationSwimmingFastName ).Loop = true ;
+    }
   }
 }
