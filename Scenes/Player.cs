@@ -8,10 +8,10 @@ public class Player : KinematicBody
   private const string AnimationPlayerPath = "Graphics/AnimationPlayer" ;
   private const string AnimationSwimmingFastName = "Swimming_Fast" ;
   private const string AnimationSwimmingImpulseName = "Swimming_Impulse" ;
-  private const string AnimationAttackName = "Attack" ;
+  // private const string AnimationAttackName = "Attack" ;
   private const string AnimationFinishedEventName = "animation_finished" ;
   private const string GraphicsPath = "Graphics" ;
-  private const string CameraPath = "Camera" ;
+  // private const string CameraPath = "Camera" ;
   private const string DashPath = "Dash" ;
   private const float MoveSpeed = 60f ;
   private const float DashDuration = .1f ;
@@ -21,7 +21,7 @@ public class Player : KinematicBody
   private AnimationPlayer _animationPlayer ;
   private Spatial _graphics ;
   private Dash _dash ;
-  private Camera _camera ;
+  // private Camera _camera ;
   private Func<Vector2> _getMouseDirection ;
   private Action<Vector2> _setMouseDirection ;
 
@@ -40,7 +40,7 @@ public class Player : KinematicBody
     _animationPlayer.GetAnimation( AnimationSwimmingFastName ).Loop = true ;
     _graphics = GetNode<Spatial>( GraphicsPath ) ;
     _dash = GetNode<Dash>( DashPath ) ;
-    _camera = GetNode<Camera>( CameraPath ) ;
+    // _camera = GetNode<Camera>( CameraPath ) ;
     Input.MouseMode = Input.MouseModeEnum.Captured ;
     ( _getMouseDirection, _setMouseDirection ) = GetMouseHelperFunction() ;
   }
@@ -93,16 +93,12 @@ public class Player : KinematicBody
 
     static Vector3 MouseHandler( Player player )
     {
-      // var mousePosition = player.GetViewport().GetMousePosition() ;
-      // var playerPosition = player._camera.UnprojectPosition( player.GlobalTransform.origin ) ;
-      // var direction = ( mousePosition - playerPosition ).Normalized() ;
-      // return new Vector3( direction.x, -direction.y, 0 ) ;
       var direction = player._getMouseDirection().Normalized() ;
       return new Vector3( direction.x, -direction.y, 0 ) ;
     }
 
-
     var moveDirection = KeyboardHandler() + MouseHandler( this ) ;
+    // To simulate that fish swims faster when moving
     _animationPlayer.PlaybackSpeed = moveDirection == Vector3.Zero ? 1f : 4f ;
 
     if ( Input.IsActionPressed( "ui_dash" ) && _dash.CanDash ) {
@@ -126,7 +122,7 @@ public class Player : KinematicBody
 
   private void OnAnimationFinished( string animationName )
   {
-    _animationPlayer.Disconnect( AnimationFinishedEventName, this, nameof( OnAnimationFinished ) ) ;
+    _animationPlayer.Disconnect( AnimationFinishedEventName, this, animationName ) ;
     _animationPlayer.Play( AnimationSwimmingFastName ) ;
     _animationPlayer.GetAnimation( AnimationSwimmingFastName ).Loop = true ;
   }
