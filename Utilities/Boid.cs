@@ -7,13 +7,13 @@ namespace Fish.Utilities
   public class Boid : Spatial
   {
     [Export]
-    private float _maxSpeed = 10 ;
+    private float _maxSpeed = 12 ;
 
     [Export]
-    private float _minSpeed = 1 ;
+    private float _minSpeed = 8 ;
 
     [Export]
-    private float _targetForce = 0.2f ;
+    private float _targetForce = 0.3f ;
 
     [Export]
     private float _cohesion = 0.2f ;
@@ -22,7 +22,7 @@ namespace Fish.Utilities
     private float _alignment = 0.3f ;
 
     [Export]
-    private float _separation = 1.2f ;
+    private float _separation = 1.3f ;
 
     [Export]
     public float ViewDistance = 5f ;
@@ -31,12 +31,14 @@ namespace Fish.Utilities
     private float _avoidDistance = 2f ;
 
     [Export]
-    private int _maxFlockSize = 15 ;
+    private int _maxFlockSize = 10 ;
 
     [Export]
-    private float _screenAvoidForce = 1f ;
+    private float _screenAvoidForce = 2f ;
 
     private const string GraphicsPath = "Graphics" ;
+    private const string AnimationPlayerPath = "Graphics/AnimationPlayer" ;
+    private const string AnimationSwimmingFastName = "Swimming_Fast" ;
     private const string VisibilityNotifierPath = "VisibilityNotifier" ;
     private const string ScreenEnteredEventName = "screen_entered" ;
     private const string ScreenExitedEventName = "screen_exited" ;
@@ -46,6 +48,7 @@ namespace Fish.Utilities
     private readonly List<Vector3> _targets = new List<Vector3>() ;
     private Spatial _graphics ;
     private VisibilityNotifier _visibilityNotifier ;
+    private AnimationPlayer _animationPlayer ;
     private float _raiseDegreesX ;
     private float _raiseDegreesZ ;
     public List<List<Boid>> Flock { get ; set ; }
@@ -55,6 +58,11 @@ namespace Fish.Utilities
     {
       _screenSize = GetViewport().Size ;
       _graphics = GetNode<Spatial>( GraphicsPath ) ;
+      _animationPlayer = GetNode<AnimationPlayer>( AnimationPlayerPath ) ;
+      _animationPlayer.Play( AnimationSwimmingFastName ) ;
+      _animationPlayer.GetAnimation( AnimationSwimmingFastName ).Loop = true ;
+      GD.Randomize() ;
+      _animationPlayer.PlaybackSpeed = (float) GD.RandRange( 2.5d, 3d ) ;
       _visibilityNotifier = GetNode<VisibilityNotifier>( VisibilityNotifierPath ) ;
       if ( _visibilityNotifier != null ) {
         _visibilityNotifier.Connect( ScreenEnteredEventName, this, nameof( ShowBoid ) ) ;

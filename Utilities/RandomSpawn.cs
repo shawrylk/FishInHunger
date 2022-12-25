@@ -7,7 +7,8 @@ namespace Fish.Utilities
   public class RandomSpawn : Node
   {
     [Export]
-    private int _startingBoidsCount = 500 ;
+    private int _startingBoidsCount = 100 ;
+
 
     [Export]
     private PackedScene _boidScene ;

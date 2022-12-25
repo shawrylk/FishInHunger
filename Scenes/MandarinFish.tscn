@@ -6,3 +6,4 @@
 
 [node name="AnimationPlayer" parent="." index="1"]
 unique_name_in_owner = true
+autoplay = "Swimming_Fast"

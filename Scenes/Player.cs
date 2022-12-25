@@ -6,6 +6,10 @@ using Fish.Utilities ;
 public class Player : KinematicBody
 {
   private const string AnimationPlayerPath = "Graphics/AnimationPlayer" ;
+  private const string AnimationSwimmingFastName = "Swimming_Fast" ;
+  private const string AnimationSwimmingImpulseName = "Swimming_Impulse" ;
+  private const string AnimationAttackName = "Attack" ;
+  private const string AnimationFinishedEventName = "animation_finished" ;
   private const string GraphicsPath = "Graphics" ;
   private const string CameraPath = "Camera" ;
   private const string DashPath = "Dash" ;
@@ -32,6 +36,8 @@ public class Player : KinematicBody
   public override void _Ready()
   {
     _animationPlayer = GetNode<AnimationPlayer>( AnimationPlayerPath ) ;
+    _animationPlayer.Play( AnimationSwimmingFastName ) ;
+    _animationPlayer.GetAnimation( AnimationSwimmingFastName ).Loop = true ;
     _graphics = GetNode<Spatial>( GraphicsPath ) ;
     _dash = GetNode<Dash>( DashPath ) ;
     _camera = GetNode<Camera>( CameraPath ) ;
@@ -95,9 +101,17 @@ public class Player : KinematicBody
       return new Vector3( direction.x, -direction.y, 0 ) ;
     }
 
-    var moveDirection = KeyboardHandler() + MouseHandler( this ) ;
 
-    if ( Input.IsActionPressed( "ui_dash" ) && _dash.CanDash ) _dash.StartDash( DashDuration ) ;
+    var moveDirection = KeyboardHandler() + MouseHandler( this ) ;
+    _animationPlayer.PlaybackSpeed = moveDirection == Vector3.Zero ? 1f : 4f ;
+
+    if ( Input.IsActionPressed( "ui_dash" ) && _dash.CanDash ) {
+      _dash.StartDash( DashDuration ) ;
+      _animationPlayer.Play( AnimationSwimmingImpulseName ) ;
+      if ( ! _animationPlayer.IsConnected( AnimationFinishedEventName, this, nameof( OnAnimationFinished ) ) )
+        _animationPlayer.Connect( AnimationFinishedEventName, this, nameof( OnAnimationFinished ) ) ;
+    }
+
     var moveSpeed = MoveSpeed ;
     if ( _dash.IsDashing ) {
       moveSpeed *= DashMultiplier ;
@@ -108,5 +122,12 @@ public class Player : KinematicBody
 
     MoveAndSlide( moveDirection * moveSpeed, Vector3.Up ) ;
     return moveDirection ;
+  }
+
+  private void OnAnimationFinished( string animationName )
+  {
+    _animationPlayer.Disconnect( AnimationFinishedEventName, this, nameof( OnAnimationFinished ) ) ;
+    _animationPlayer.Play( AnimationSwimmingFastName ) ;
+    _animationPlayer.GetAnimation( AnimationSwimmingFastName ).Loop = true ;
   }
 }
