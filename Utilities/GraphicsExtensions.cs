@@ -5,6 +5,7 @@ namespace Fish.Utilities
   public static class GraphicsExtensions
   {
     public static Vector2 GameWorldScreenSize = new Vector2( 240, 120 ) ;
+    public const float ScreenSizeScaleFactor = 20 ; // with distance of camera = 20, fov = 70, this value is guess from trial and error method :)
 
     public static void Flip( this Vector3 moveDirection, Spatial graphics, float raisedDegreesX, float raisedDegreesZ )
     {

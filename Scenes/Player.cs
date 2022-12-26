@@ -208,6 +208,8 @@ public class Player : KinematicBody
       }
 
       _owner.MoveAndSlide( _moveDirection * moveSpeed, Vector3.Up ) ;
+      // Limit player in playable area
+      _owner.Translation = _owner.Translation.Clamp( Vector3.Zero, GraphicsExtensions.GameWorldScreenSize.ToVector3( 0 ) ) ;
       return _moveDirection ;
     }
 
