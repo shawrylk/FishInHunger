@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks ;
 using Godot ;
 
-namespace Fish.Utilities
+namespace Fish.Scripts.Utilities
 {
   public static class TimerExtensions
   {

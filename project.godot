@@ -32,6 +32,7 @@ etc=false
 "import etc"=false
 fps=true
 process=false
+"physics server"=true
 
 [gui]
 
@@ -80,6 +81,7 @@ project/assembly_name="Fish"
 [physics]
 
 common/physics_jitter_fix=400.0
+3d/default_gravity_vector=Vector3( 0, 0, 0 )
 common/physics_interpolation=true
 
 [rendering]

@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic ;
+using System.Collections.Generic ;
 using System.Linq ;
+using Fish.Scripts.Utilities ;
 using Godot ;
 
-namespace Fish.Utilities
+namespace Fish.Scripts.Nodes
 {
   public class Boid : Spatial
   {
@@ -42,17 +43,16 @@ namespace Fish.Utilities
     private const string VisibilityNotifierPath = "VisibilityNotifier" ;
     private const string ScreenEnteredEventName = "screen_entered" ;
     private const string ScreenExitedEventName = "screen_exited" ;
-    private Vector2 _screenSize ;
-    private bool _stayOnScreen = true ;
-    private int _flockSize = 0 ;
-    private readonly List<Vector3> _targets = new List<Vector3>() ;
     private Spatial _graphics ;
     private VisibilityNotifier _visibilityNotifier ;
     private AnimationPlayer _animationPlayer ;
+    private Vector2 _screenSize ;
+    private Vector3 _velocity ;
+    private readonly bool _stayOnScreen = true ;
+    private readonly List<Vector3> _targets = new List<Vector3>() ;
     private float _raiseDegreesX ;
     private float _raiseDegreesZ ;
     public List<List<Boid>> Flock { get ; set ; }
-    public Vector3 Velocity { get ; private set ; }
 
     public override void _Ready()
     {
@@ -75,7 +75,7 @@ namespace Fish.Utilities
       _raiseDegreesX = (float) GD.RandRange( 10, 60 ) ;
       GD.Randomize() ;
       _raiseDegreesZ = (float) GD.RandRange( 5, 30 ) ;
-      Velocity = new Vector3( (float) GD.RandRange( -1d, 1d ), (float) GD.RandRange( -1d, 1d ), 0 ).Floor() * _maxSpeed ;
+      _velocity = new Vector3( (float) GD.RandRange( -1d, 1d ), (float) GD.RandRange( -1d, 1d ), 0 ).Floor() * _maxSpeed ;
       base._Ready() ;
     }
 
@@ -91,24 +91,23 @@ namespace Fish.Utilities
 
     public override void _PhysicsProcess( float delta )
     {
-      Translation += Velocity * delta ;
+      Translation += _velocity * delta ;
       var screenAvoidVector = Vector3.Zero ;
       if ( _stayOnScreen ) screenAvoidVector = AvoidScreenEdge() * _screenAvoidForce ;
       else WrapScreen() ;
-      var (cohesionVector, alignVector, separationVector, flockSize) = GetFlockStatus() ;
-      cohesionVector = cohesionVector * _cohesion ;
-      alignVector = alignVector * _alignment ;
-      separationVector = separationVector * _separation ;
-      _flockSize = flockSize ;
+      var (cohesionVector, alignVector, separationVector) = GetFlockStatus() ;
+      cohesionVector *= _cohesion ;
+      alignVector *= _alignment ;
+      separationVector *= _separation ;
       var additionalVelocity = cohesionVector + alignVector + separationVector + screenAvoidVector ;
       if ( _targets.Count > 0 ) {
         var targetVector = _targets.Aggregate( Vector3.Zero, ( current, target ) => current + GlobalTranslation.DirectionTo( target ) ) / _targets.Count ;
         additionalVelocity += targetVector * _targetForce ;
       }
 
-      Velocity = Velocity.LinearInterpolate( Velocity + additionalVelocity, 0.2f ).LimitLength( _maxSpeed ) ;
-      if ( Velocity.Length() < _minSpeed ) ( Velocity * _minSpeed ).LimitLength( _maxSpeed ) ;
-      Velocity.Flip( _graphics, _raiseDegreesX, _raiseDegreesZ ) ;
+      _velocity = _velocity.LinearInterpolate( _velocity + additionalVelocity, 0.2f ).LimitLength( _maxSpeed ) ;
+      if ( _velocity.Length() < _minSpeed ) ( _velocity * _minSpeed ).LimitLength( _maxSpeed ) ;
+      _velocity.Flip( _graphics, _raiseDegreesX, _raiseDegreesZ ) ;
       base._PhysicsProcess( delta ) ;
     }
 
@@ -127,16 +126,16 @@ namespace Fish.Utilities
       Translation = new Vector3( Mathf.Wrap( Translation.x, 0, _screenSize.x ), Mathf.Wrap( Translation.y, 0, _screenSize.y ), 0 ) ;
     }
 
-    private (Vector3 center, Vector3 align, Vector3 avoid, int otherCount) GetFlockStatus()
+    private (Vector3 center, Vector3 align, Vector3 avoid) GetFlockStatus()
     {
       var (centerVector, flockCenter, alignVector, avoidVector, otherCount) = ( Vector3.Zero, Vector3.Zero, Vector3.Zero, Vector3.Zero, 0 ) ;
-      if ( Flock is null ) return ( centerVector, alignVector, avoidVector, otherCount ) ;
+      if ( Flock is null ) return ( centerVector, alignVector, avoidVector ) ;
       foreach ( var listNode in Flock ) {
         foreach ( var node in listNode ) {
           if ( otherCount == _maxFlockSize ) break ;
           if ( node == this ) continue ;
           var otherPosition = node.GlobalTranslation ;
-          var otherVelocity = node.Velocity ;
+          var otherVelocity = node._velocity ;
           if ( ! ( GlobalTranslation.DistanceTo( otherPosition ) is var distance ) || ! ( distance < ViewDistance ) ) continue ;
           otherCount += 1 ;
           alignVector += otherVelocity ;
@@ -151,7 +150,7 @@ namespace Fish.Utilities
         centerVector = GlobalTranslation.DirectionTo( flockCenter ) ;
       }
 
-      return ( centerVector, alignVector, avoidVector, otherCount ) ;
+      return ( centerVector, alignVector, avoidVector ) ;
     }
 
     public void AddTarget( Vector3 targetPosition )
