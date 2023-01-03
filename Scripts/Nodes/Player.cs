@@ -12,11 +12,13 @@ namespace Fish.Scripts.Nodes
     private readonly IList<PlayerInputHandler> _playerActionHandlers = new List<PlayerInputHandler>() ;
     private PlayerMovementHandler _movementHandler ;
     private AnimationHandler _animationHandler ;
+    private CollidingHandler _collidingHandler ;
 
     public override void _Ready()
     {
       _movementHandler = new PlayerMovementHandler( this ) ;
       _animationHandler = new AnimationHandler( this ) ;
+      _collidingHandler = new CollidingHandler( this ) ;
       _playerActionHandlers.Add( new KeyboardHandler() ) ;
       _playerActionHandlers.Add( new TouchHandler() ) ;
       // Because touch action on Mobile conflicts with mouse, and I don't know what will happen to Desktop has touch support,
@@ -32,6 +34,7 @@ namespace Fish.Scripts.Nodes
       var doDash = _playerActionHandlers.Any( handler => PlayerInputHandler.IsActionPressed() ) ;
       var moveDirection = _movementHandler.MoveAndFlip( toDirection, doDash ) ;
       _animationHandler.UpdateAnimation( moveDirection, _movementHandler.IsDashing ) ;
+      _collidingHandler.HandleCollider() ;
       base._PhysicsProcess( delta ) ;
     }
 
@@ -45,11 +48,11 @@ namespace Fish.Scripts.Nodes
     }
 
 // #if DEBUG
-//   public override void _Process( float delta )
-//   {
-//     GD.Print( Engine.GetFramesPerSecond() ) ;
-//     base._Process( delta ) ;
-//   }
+//     public override void _Process( float delta )
+//     {
+//       GD.Print( Engine.GetFramesPerSecond() ) ;
+//       base._Process( delta ) ;
+//     }
 // #endif
 
     private abstract class PlayerInputHandler
@@ -241,11 +244,31 @@ namespace Fish.Scripts.Nodes
       public void UpdateAnimation( Vector3 moveDirection, bool isDashing )
       {
         // To simulate that fish swims faster when moving
-        _animationPlayer.PlaybackSpeed = moveDirection == Vector3.Zero ? 1f : 1.3f ;
+        _animationPlayer.PlaybackSpeed = moveDirection == Vector3.Zero ? 1f : 1.7f ;
         if ( isDashing ) _animationPlayer.Play( AnimationSwimmingImpulseName ) ;
         if ( _animationPlayer.IsPlaying() ) return ;
         _animationPlayer.Play( AnimationSwimmingFastName ) ;
         _animationPlayer.GetAnimation( AnimationSwimmingFastName ).Loop = true ;
+      }
+    }
+
+    private class CollidingHandler
+    {
+      private readonly KinematicBody _owner ;
+
+      public CollidingHandler( KinematicBody owner )
+      {
+        _owner = owner ;
+      }
+
+      public void HandleCollider()
+      {
+        for ( int index = 0, count = _owner.GetSlideCount() ; index < count ; index++ ) {
+          var collision = _owner.GetSlideCollision( index ) ;
+          if ( collision.Collider is Boid boid && boid.IsInGroup( RandomSpawn.BoidsGroupNodePath ) ) {
+            boid.ReturnToPool() ;
+          }
+        }
       }
     }
   }

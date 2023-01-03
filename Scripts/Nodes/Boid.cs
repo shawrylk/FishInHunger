@@ -1,11 +1,12 @@
 using System.Collections.Generic ;
+using System.Diagnostics ;
 using System.Linq ;
 using Fish.Scripts.Utilities ;
 using Godot ;
 
 namespace Fish.Scripts.Nodes
 {
-  public class Boid : Spatial
+  public class Boid : KinematicBody, ICell
   {
     [Export]
     private float _maxSpeed = 18 ;
@@ -47,12 +48,13 @@ namespace Fish.Scripts.Nodes
     private VisibilityNotifier _visibilityNotifier ;
     private AnimationPlayer _animationPlayer ;
     private Vector2 _screenSize ;
-    private Vector3 _velocity ;
     private readonly bool _stayOnScreen = true ;
     private readonly List<Vector3> _targets = new List<Vector3>() ;
     private float _raiseDegreesX ;
     private float _raiseDegreesZ ;
-    public List<List<Boid>> Flock { get ; set ; }
+    private Vector3 _velocity ;
+    public ICollection<Boid> Flock { get ; set ; }
+    public bool IsDisabled { get ; private set ; }
 
     public override void _Ready()
     {
@@ -86,12 +88,19 @@ namespace Fish.Scripts.Nodes
 
     private void HideBoid()
     {
-      Visible = true ;
+      Visible = false ;
     }
 
     public override void _PhysicsProcess( float delta )
     {
-      Translation += _velocity * delta ;
+      if ( IsDisabled ) return ;
+      _velocity = CalculateLinearVelocity( _velocity ) ;
+      MoveAndSlide( _velocity, Vector3.Up ) ;
+      base._PhysicsProcess( delta ) ;
+    }
+
+    private Vector3 CalculateLinearVelocity( Vector3 velocity )
+    {
       var screenAvoidVector = Vector3.Zero ;
       if ( _stayOnScreen ) screenAvoidVector = AvoidScreenEdge() * _screenAvoidForce ;
       else WrapScreen() ;
@@ -105,10 +114,12 @@ namespace Fish.Scripts.Nodes
         additionalVelocity += targetVector * _targetForce ;
       }
 
-      _velocity = _velocity.LinearInterpolate( _velocity + additionalVelocity, 0.2f ).LimitLength( _maxSpeed ) ;
-      if ( _velocity.Length() < _minSpeed ) ( _velocity * _minSpeed ).LimitLength( _maxSpeed ) ;
-      _velocity.Flip( _graphics, _raiseDegreesX, _raiseDegreesZ ) ;
-      base._PhysicsProcess( delta ) ;
+      // Keep fish swims in 2D by converging Translation.Z to 0
+      velocity.z = -Translation.z ;
+      velocity = velocity.LinearInterpolate( velocity + additionalVelocity, 0.2f ).LimitLength( _maxSpeed ) ;
+      if ( velocity.Length() < _minSpeed ) ( velocity * _minSpeed ).LimitLength( _maxSpeed ) ;
+      velocity.Flip( _graphics, _raiseDegreesX, _raiseDegreesZ ) ;
+      return velocity ;
     }
 
     private Vector3 AvoidScreenEdge()
@@ -130,18 +141,21 @@ namespace Fish.Scripts.Nodes
     {
       var (centerVector, flockCenter, alignVector, avoidVector, otherCount) = ( Vector3.Zero, Vector3.Zero, Vector3.Zero, Vector3.Zero, 0 ) ;
       if ( Flock is null ) return ( centerVector, alignVector, avoidVector ) ;
-      foreach ( var listNode in Flock ) {
-        foreach ( var node in listNode ) {
-          if ( otherCount == _maxFlockSize ) break ;
-          if ( node == this ) continue ;
-          var otherPosition = node.GlobalTranslation ;
-          var otherVelocity = node._velocity ;
-          if ( ! ( GlobalTranslation.DistanceTo( otherPosition ) is var distance ) || ! ( distance < ViewDistance ) ) continue ;
-          otherCount += 1 ;
-          alignVector += otherVelocity ;
-          flockCenter += otherPosition ;
-          if ( distance < _avoidDistance ) avoidVector -= otherPosition - GlobalTranslation ;
+
+      foreach ( var node in Flock ) {
+        if ( otherCount == _maxFlockSize ) break ;
+        if ( node == this ) continue ;
+        if ( node == null || node.IsInsideTree() == false ) {
+          continue ;
         }
+
+        var otherPosition = node.GlobalTranslation ;
+        var otherVelocity = node._velocity ;
+        if ( ! ( GlobalTranslation.DistanceTo( otherPosition ) is var distance ) || ! ( distance < ViewDistance ) ) continue ;
+        otherCount += 1 ;
+        alignVector += otherVelocity ;
+        flockCenter += otherPosition ;
+        if ( distance < _avoidDistance ) avoidVector -= otherPosition - GlobalTranslation ;
       }
 
       if ( otherCount > 0 ) {
@@ -162,5 +176,18 @@ namespace Fish.Scripts.Nodes
     {
       _targets.Clear() ;
     }
+
+    public void ReturnToPool()
+    {
+      HideBoid() ;
+      IsDisabled = true ;
+      SetPhysicsProcess( false ) ;
+      SetProcess( false ) ;
+      GetParent()?.RemoveChild( this ) ;
+      // Translation = ( GetViewport().Size * -1 ).ToVector3( 0 ) ;
+      // ResetPhysicsInterpolation() ;
+    }
+
+    public Vector2 ScaledPoint { get ; set ; }
   }
 }

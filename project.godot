@@ -19,8 +19,7 @@ config/icon="res://icon.png"
 window/size/width=2160
 window/size/height=1080
 window/size/borderless=true
-window/size/test_width=1024
-window/size/test_height=512
+window/vsync/use_vsync=false
 window/stretch/aspect="keep"
 
 [global]
@@ -33,6 +32,7 @@ etc=false
 fps=true
 process=false
 "physics server"=true
+vsyn=false
 
 [gui]
 
