@@ -44,6 +44,7 @@ namespace Fish.Scripts.Nodes
       base._UnhandledInput( @event ) ;
     }
 
+<<<<<<< Updated upstream
 // #if DEBUG
 //   public override void _Process( float delta )
 //   {
@@ -51,6 +52,15 @@ namespace Fish.Scripts.Nodes
 //     base._Process( delta ) ;
 //   }
 // #endif
+=======
+#if DEBUG
+    public override void _Process( float delta )
+    {
+      GD.Print( Engine.GetFramesPerSecond() ) ;
+      base._Process( delta ) ;
+    }
+#endif
+>>>>>>> Stashed changes
 
     private abstract class PlayerInputHandler
     {
@@ -248,5 +258,28 @@ namespace Fish.Scripts.Nodes
         _animationPlayer.GetAnimation( AnimationSwimmingFastName ).Loop = true ;
       }
     }
+<<<<<<< Updated upstream
+=======
+
+    private class CollidingHandler
+    {
+      private readonly KinematicBody _owner ;
+
+      public CollidingHandler( KinematicBody owner )
+      {
+        _owner = owner ;
+      }
+
+      public void HandleCollider()
+      {
+        // for ( int index = 0, count = _owner.GetSlideCount() ; index < count ; index++ ) {
+        //   var collision = _owner.GetSlideCollision( index ) ;
+        //   if ( collision.Collider is Boid boid && boid.IsInGroup( RandomSpawn.BoidsGroupNodePath ) ) {
+        //     boid.ReturnToPool() ;
+        //   }
+        // }
+      }
+    }
+>>>>>>> Stashed changes
   }
 }

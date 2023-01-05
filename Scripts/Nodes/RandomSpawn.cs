@@ -5,13 +5,13 @@ using Godot ;
 
 namespace Fish.Scripts.Nodes
 {
-  public class RandomSpawn : Node
+  public class RandomSpawn : Spatial
   {
     [Export]
     private int _startingBoidsCount = 100 ;
 
     [Export]
-    private PackedScene _boidScene = GD.Load( "res://Scenes/Boid.tscn" ) as PackedScene ;
+    private PackedScene _boidScene = GD.Load( "res://Scenes/RedSnapper.tscn" ) as PackedScene ;
 
     [Export]
     private int _computeGroup = 4 ;
@@ -26,9 +26,22 @@ namespace Fish.Scripts.Nodes
     public override void _Ready()
     {
       _screenSize = GraphicsExtensions.GameWorldScreenSize ;
+<<<<<<< Updated upstream
       // _screenSize = GetViewport().Size ;
       _boidsNode = GetParent().GetNode<Node>( BoidsNodePath ) ;
       InitBoids() ;
+=======
+      _boidsPool.InitPool( new BoidsPool.BoidsPoolParameter
+      {
+        Space = GetWorld().Space,
+        BoidGroupName = BoidsGroupName,
+        ScreenSize = _screenSize,
+        BoidsNode = GetParent().GetNode<Node>( BoidsGroupNodePath ),
+        BoidScene = _boidScene,
+        StartingBoidsCount = _startingBoidsCount,
+        GridStructure = new BoidAccelerateStructure2D( _screenSize, 1 ),
+      } ) ;
+>>>>>>> Stashed changes
       base._Ready() ;
     }
 
@@ -47,6 +60,7 @@ namespace Fish.Scripts.Nodes
 
     public override void _Process( float delta )
     {
+<<<<<<< Updated upstream
       var scalePoints = BuildStruct() ;
       UpdateBoids( scalePoints ) ;
       ProcessBoids( delta ) ;
@@ -85,6 +99,17 @@ namespace Fish.Scripts.Nodes
       var start = _boids.Count / _computeGroup * groupIndex ;
       var end = start + _boids.Count / _computeGroup + ( groupIndex + 1 == _boids.Count ? _boids.Count % _computeGroup : 0 ) ;
       for ( var i = start ; i < end ; i++ ) _boids[ i ]._Process( delta ) ;
+=======
+      // using var _ = DebugUtilities.StartDisposableStopwatch() ;
+      _boidsPool.UpdateGridStructure() ;
+      base._Process( delta ) ;
+    }
+
+    public override void _PhysicsProcess( float delta )
+    {
+      _boidsPool.PhysicsProcess( delta ) ;
+      base._PhysicsProcess( delta ) ;
+>>>>>>> Stashed changes
     }
   }
 }

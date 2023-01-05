@@ -21,6 +21,10 @@ window/size/height=1080
 window/size/borderless=true
 window/size/test_width=1024
 window/size/test_height=512
+<<<<<<< Updated upstream
+=======
+window/vsync/use_vsync=false
+>>>>>>> Stashed changes
 window/stretch/aspect="keep"
 
 [global]
