@@ -8,7 +8,7 @@ namespace Fish.Scripts.Nodes
   public class RandomSpawn : Node
   {
     [Export]
-    private int _startingBoidsCount = 200 ;
+    private int _startingBoidsCount = 300 ;
 
     [Export]
     private PackedScene _boidScene = GD.Load( "res://Scenes/Boid.tscn" ) as PackedScene ;
@@ -28,14 +28,14 @@ namespace Fish.Scripts.Nodes
         BoidsNode = GetParent().GetNode<Node>( BoidsGroupNodePath ),
         BoidScene = _boidScene,
         StartingBoidsCount = _startingBoidsCount,
-        GridStructure = new BoidAccelerateStructure2D( _screenSize, 1 ),
+        GridStructure = new BoidAccelerateStructure2D( _screenSize, 4 ),
       } ) ;
       base._Ready() ;
     }
 
     public override void _Process( float delta )
     {
-      using var _ = DebugUtilities.StartDisposableStopwatch() ;
+      // using var _ = DebugUtilities.StartDisposableStopwatch() ;
       _boidsPool.UpdateGridStructure() ;
       base._Process( delta ) ;
     }

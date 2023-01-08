@@ -18,19 +18,19 @@ namespace Fish.Scripts.Nodes
     private float _targetForce = 0.3f ;
 
     [Export]
-    private float _cohesion = 0.2f ;
+    private float _cohesion = 0.5f ;
 
     [Export]
     private float _alignment = 0.3f ;
 
     [Export]
-    private float _separation = 1.7f ;
+    private float _separation = 1.9f ;
 
     [Export]
     public float ViewDistance = 5f ;
 
     [Export]
-    private float _avoidDistance = 2f ;
+    private float _avoidDistance = 3f ;
 
     [Export]
     private int _maxFlockSize = 10 ;
@@ -74,10 +74,10 @@ namespace Fish.Scripts.Nodes
       }
 
       GD.Randomize() ;
-      _raiseDegreesX = (float) GD.RandRange( 10, 60 ) ;
+      _raiseDegreesX = (float) GD.RandRange( 10, 30 ) ;
       GD.Randomize() ;
       _raiseDegreesZ = (float) GD.RandRange( 5, 30 ) ;
-      _velocity = new Vector3( (float) GD.RandRange( -1d, 1d ), (float) GD.RandRange( -1d, 1d ), 0 ).Floor() * _maxSpeed ;
+      _velocity = new Vector3( (float) GD.RandRange( -1d, 1d ), (float) GD.RandRange( -1d, 1d ), 0 ) * _maxSpeed ;
       base._Ready() ;
     }
 
