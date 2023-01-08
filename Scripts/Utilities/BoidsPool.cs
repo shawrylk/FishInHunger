@@ -16,6 +16,7 @@ namespace Fish.Scripts.Utilities
       public IGridStructure GridStructure { get ; set ; }
       public Vector2 ScreenSize { get ; set ; }
       public Node BoidsNode { get ; set ; }
+      public BvhStructure CollidingCells { get ; set ; }
     }
 
     private BoidsPoolParameter _parameter ;
@@ -32,6 +33,7 @@ namespace Fish.Scripts.Utilities
         boid.Translation = initialPosition ;
         boid.ScaledPoint = initialPosition.ToVector2() ;
         boid.AddToGroup( _parameter.BoidGroupName ) ;
+        boid.CollidingCells = _parameter.CollidingCells ;
         _pool.Add( boid ) ;
         _parameter.BoidsNode.AddChild( boid ) ;
       }

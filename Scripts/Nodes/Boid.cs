@@ -1,3 +1,4 @@
+using System ;
 using System.Collections.Generic ;
 using System.Diagnostics ;
 using System.Linq ;
@@ -6,37 +7,37 @@ using Godot ;
 
 namespace Fish.Scripts.Nodes
 {
-  public class Boid : KinematicBody, ICell
+  public class Boid : KinematicBody, ICell, IBoundingBoxGetter
   {
     [Export]
-    private float _maxSpeed = 18 ;
+    private float _maxSpeed = 16 ;
 
     [Export]
-    private float _minSpeed = 12 ;
+    private float _minSpeed = 10 ;
 
     [Export]
     private float _targetForce = 0.3f ;
 
     [Export]
-    private float _cohesion = 0.5f ;
+    private float _cohesion = 0.8f ;
 
     [Export]
     private float _alignment = 0.3f ;
 
     [Export]
-    private float _separation = 1.9f ;
+    private float _separation = 1.4f ;
 
     [Export]
     public float ViewDistance = 5f ;
 
     [Export]
-    private float _avoidDistance = 3f ;
+    private float _avoidDistance = 5f ;
 
     [Export]
     private int _maxFlockSize = 10 ;
 
     [Export]
-    private float _screenAvoidForce = 1f ;
+    private float _avoidForce = 7f ;
 
     private const string GraphicsPath = "Graphics" ;
     private const string AnimationPlayerPath = "Graphics/AnimationPlayer" ;
@@ -55,6 +56,7 @@ namespace Fish.Scripts.Nodes
     private Vector3 _velocity ;
     public ICollection<Boid> Flock { get ; set ; }
     public bool IsDisabled { get ; private set ; }
+    public BvhStructure CollidingCells { get ; set ; }
 
     public override void _Ready()
     {
@@ -102,7 +104,7 @@ namespace Fish.Scripts.Nodes
     private Vector3 CalculateLinearVelocity( Vector3 velocity )
     {
       var screenAvoidVector = Vector3.Zero ;
-      if ( _stayOnScreen ) screenAvoidVector = AvoidScreenEdge() * _screenAvoidForce ;
+      if ( _stayOnScreen ) screenAvoidVector = AvoidScreenEdge() * _avoidForce ;
       else WrapScreen() ;
       var (cohesionVector, alignVector, separationVector) = GetFlockStatus() ;
       cohesionVector *= _cohesion ;
@@ -129,6 +131,17 @@ namespace Fish.Scripts.Nodes
       else if ( Translation.x + _avoidDistance > _screenSize.x ) edgeAvoidVector.x = -1 ;
       if ( Translation.y - _avoidDistance < 0 ) edgeAvoidVector.y = 1 ;
       else if ( Translation.y + _avoidDistance > _screenSize.y ) edgeAvoidVector.y = -1 ;
+      if ( edgeAvoidVector != Vector3.Zero ) return edgeAvoidVector ;
+      var collideTileMap = CollidingCells.Overlaps( GetBoundingBox() ) ;
+      if ( collideTileMap is null ) return edgeAvoidVector ;
+      if ( _velocity.x < 0 ) edgeAvoidVector.x = -0.3f ;
+      else if ( _velocity.x > 0 ) edgeAvoidVector.x = 0.3f ;
+      if ( Translation.y < collideTileMap.Centroid.y ) edgeAvoidVector.y = -1 ;
+      else if ( Translation.y > collideTileMap.Centroid.y ) edgeAvoidVector.y = 1 ;
+      // edgeAvoidVector.y -= collideTileMap.Centroid.y - Translation.y ;
+      // Use approximate calculation tan = opposite / adjacent
+      // var newDirection = collideTileMap.Centroid - Translation ;
+      // edgeAvoidVector = newDirection.Rotated( Vector3.Forward, Mathf.Atan( ( collideTileMap.Max - collideTileMap.Centroid ).Length() / newDirection.Length() ) ) ;
       return edgeAvoidVector ;
     }
 
@@ -189,5 +202,11 @@ namespace Fish.Scripts.Nodes
     }
 
     public Vector2 ScaledPoint { get ; set ; }
+
+    public BoundingBox GetBoundingBox()
+    {
+      var vector = new Vector3( _avoidDistance, _avoidDistance, _avoidDistance ) ;
+      return new BoundingBox( this.Translation - vector, this.Translation + vector ) ;
+    }
   }
 }

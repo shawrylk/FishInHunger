@@ -26,7 +26,21 @@ namespace Fish.Scripts.Nodes
       if ( OS.GetName() != "Android" && OS.GetName() != "iOS" ) {
         _playerActionHandlers.Add( new MouseHandler() ) ;
       }
+
+      // var gridMap = GetParent().GetNode<GridMap>( "GridMap" ) ;
+      // var cellSize = new Vector3( 2, 2, 2 ) ;
+      // var cellSizeFloat = 2 ;
+      // CollidingCells = new BvhStructure( gridMap?.GetUsedCells().OfType<Vector3>().Select( vector => new BoundingBox( vector * cellSizeFloat, ( vector + cellSize ) * cellSizeFloat ) ).ToList() ) ;
     }
+
+    // public BoundingBox GetBoundingBox()
+    // {
+    //   var _avoidDistance = 3f ;
+    //   var vector = new Vector3( _avoidDistance, _avoidDistance, _avoidDistance ) ;
+    //   return new BoundingBox( this.Translation - vector, this.Translation + vector ) ;
+    // }
+
+    // public BvhStructure CollidingCells { get ; set ; }
 
     public override void _PhysicsProcess( float delta )
     {
@@ -35,6 +49,8 @@ namespace Fish.Scripts.Nodes
       var moveDirection = _movementHandler.MoveAndFlip( toDirection, doDash ) ;
       _animationHandler.UpdateAnimation( moveDirection, _movementHandler.IsDashing ) ;
       _collidingHandler.HandleCollider() ;
+      // var tilemap = CollidingCells.Overlaps( GetBoundingBox() ) ;
+      // if ( tilemap != null ) GD.Print( tilemap.Centroid ) ;
       base._PhysicsProcess( delta ) ;
     }
 
