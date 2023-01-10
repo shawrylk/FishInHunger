@@ -19,6 +19,7 @@ namespace Fish.Scripts.Nodes
     public const string GridMapNodePath = "GridMap" ;
     private Vector2 _screenSize ;
     private readonly BoidsPool _boidsPool = new BoidsPool() ;
+    public BoidsPool BoidsPool => _boidsPool ;
 
     public override void _Ready()
     {

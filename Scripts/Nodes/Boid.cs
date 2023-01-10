@@ -1,6 +1,4 @@
-using System ;
 using System.Collections.Generic ;
-using System.Diagnostics ;
 using System.Linq ;
 using Fish.Scripts.Utilities ;
 using Godot ;
@@ -19,13 +17,13 @@ namespace Fish.Scripts.Nodes
     private float _targetForce = 0.3f ;
 
     [Export]
-    private float _cohesion = 0.8f ;
+    private float _cohesion = 0.9f ;
 
     [Export]
-    private float _alignment = 0.3f ;
+    private float _alignment = 0.4f ;
 
     [Export]
-    private float _separation = 1.4f ;
+    private float _separation = 1.1f ;
 
     [Export]
     public float ViewDistance = 5f ;
@@ -54,9 +52,11 @@ namespace Fish.Scripts.Nodes
     private float _raiseDegreesX ;
     private float _raiseDegreesZ ;
     private Vector3 _velocity ;
+    private KinematicBody _player ;
     public ICollection<Boid> Flock { get ; set ; }
     public bool IsDisabled { get ; private set ; }
     public BvhStructure CollidingCells { get ; set ; }
+    private float _playerAvoidDistance ;
 
     public override void _Ready()
     {
@@ -80,6 +80,8 @@ namespace Fish.Scripts.Nodes
       GD.Randomize() ;
       _raiseDegreesZ = (float) GD.RandRange( 5, 30 ) ;
       _velocity = new Vector3( (float) GD.RandRange( -1d, 1d ), (float) GD.RandRange( -1d, 1d ), 0 ) * _maxSpeed ;
+      GD.Randomize() ;
+      _playerAvoidDistance = (float) ( _avoidDistance * ( GD.Randf() % 0.5 + 1 ) ) ;
       base._Ready() ;
     }
 
@@ -103,14 +105,14 @@ namespace Fish.Scripts.Nodes
 
     private Vector3 CalculateLinearVelocity( Vector3 velocity )
     {
-      var screenAvoidVector = Vector3.Zero ;
-      if ( _stayOnScreen ) screenAvoidVector = AvoidScreenEdge() * _avoidForce ;
+      var avoidVector = Vector3.Zero ;
+      if ( _stayOnScreen ) avoidVector = AvoidObstacles() * _avoidForce ;
       else WrapScreen() ;
       var (cohesionVector, alignVector, separationVector) = GetFlockStatus() ;
       cohesionVector *= _cohesion ;
       alignVector *= _alignment ;
       separationVector *= _separation ;
-      var additionalVelocity = cohesionVector + alignVector + separationVector + screenAvoidVector ;
+      var additionalVelocity = cohesionVector + alignVector + separationVector ;
       if ( _targets.Count > 0 ) {
         var targetVector = _targets.Aggregate( Vector3.Zero, ( current, target ) => current + GlobalTranslation.DirectionTo( target ) ) / _targets.Count ;
         additionalVelocity += targetVector * _targetForce ;
@@ -118,30 +120,47 @@ namespace Fish.Scripts.Nodes
 
       // Keep fish swims in 2D by converging Translation.Z to 0
       velocity.z = -Translation.z ;
-      velocity = velocity.LinearInterpolate( velocity + additionalVelocity, 0.2f ).LimitLength( _maxSpeed ) ;
+      velocity = velocity.LinearInterpolate( velocity + additionalVelocity, 0.2f ).LimitLength( _maxSpeed ) + avoidVector ;
       if ( velocity.Length() < _minSpeed ) ( velocity * _minSpeed ).LimitLength( _maxSpeed ) ;
       velocity.Flip( _graphics, _raiseDegreesX, _raiseDegreesZ ) ;
       return velocity ;
     }
 
-    private Vector3 AvoidScreenEdge()
+    private Vector3 AvoidObstacles()
     {
       var edgeAvoidVector = Vector3.Zero ;
+
+      // Avoid screen edge
       if ( Translation.x - _avoidDistance < 0 ) edgeAvoidVector.x = 1 ;
       else if ( Translation.x + _avoidDistance > _screenSize.x ) edgeAvoidVector.x = -1 ;
       if ( Translation.y - _avoidDistance < 0 ) edgeAvoidVector.y = 1 ;
       else if ( Translation.y + _avoidDistance > _screenSize.y ) edgeAvoidVector.y = -1 ;
       if ( edgeAvoidVector != Vector3.Zero ) return edgeAvoidVector ;
+
+      // Avoid tilemaps
       var collideTileMap = CollidingCells.Overlaps( GetBoundingBox() ) ;
-      if ( collideTileMap is null ) return edgeAvoidVector ;
-      if ( _velocity.x < 0 ) edgeAvoidVector.x = -0.3f ;
-      else if ( _velocity.x > 0 ) edgeAvoidVector.x = 0.3f ;
-      if ( Translation.y < collideTileMap.Centroid.y ) edgeAvoidVector.y = -1 ;
-      else if ( Translation.y > collideTileMap.Centroid.y ) edgeAvoidVector.y = 1 ;
+      if ( collideTileMap is { } ) {
+        if ( _velocity.x < 0 ) edgeAvoidVector.x = -0.3f ;
+        else if ( _velocity.x > 0 ) edgeAvoidVector.x = 0.3f ;
+        if ( Translation.y < collideTileMap.Centroid.y ) edgeAvoidVector.y = -1 ;
+        else if ( Translation.y > collideTileMap.Centroid.y ) edgeAvoidVector.y = 1 ;
+      }
+
+      if ( edgeAvoidVector != Vector3.Zero ) return edgeAvoidVector ;
       // edgeAvoidVector.y -= collideTileMap.Centroid.y - Translation.y ;
       // Use approximate calculation tan = opposite / adjacent
       // var newDirection = collideTileMap.Centroid - Translation ;
       // edgeAvoidVector = newDirection.Rotated( Vector3.Forward, Mathf.Atan( ( collideTileMap.Max - collideTileMap.Centroid ).Length() / newDirection.Length() ) ) ;
+
+      // Avoid player
+      if ( _player is { } ) {
+        if ( Translation.DistanceTo( _player.Translation ) > _playerAvoidDistance ) return edgeAvoidVector ;
+        if ( Translation.x < _player.Translation.x ) edgeAvoidVector.x = -1f ;
+        else if ( Translation.x > _player.Translation.x ) edgeAvoidVector.x = 1f ;
+        if ( Translation.y < _player.Translation.y ) edgeAvoidVector.y = -1f ;
+        else if ( Translation.y < _player.Translation.y ) edgeAvoidVector.y = 1f ;
+      }
+
       return edgeAvoidVector ;
     }
 
@@ -201,12 +220,17 @@ namespace Fish.Scripts.Nodes
       // ResetPhysicsInterpolation() ;
     }
 
+    public void UpdatePlayerPosition( KinematicBody translation )
+    {
+      _player = translation ;
+    }
+
     public Vector2 ScaledPoint { get ; set ; }
 
     public BoundingBox GetBoundingBox()
     {
       var vector = new Vector3( _avoidDistance, _avoidDistance, _avoidDistance ) ;
-      return new BoundingBox( this.Translation - vector, this.Translation + vector ) ;
+      return new BoundingBox( Translation - vector, Translation + vector ) ;
     }
   }
 }

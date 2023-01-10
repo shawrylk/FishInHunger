@@ -13,6 +13,7 @@ namespace Fish.Scripts.Nodes
     private PlayerMovementHandler _movementHandler ;
     private AnimationHandler _animationHandler ;
     private CollidingHandler _collidingHandler ;
+    private RandomSpawn _randomSpawn ;
 
     public override void _Ready()
     {
@@ -31,8 +32,14 @@ namespace Fish.Scripts.Nodes
       // var cellSize = new Vector3( 2, 2, 2 ) ;
       // var cellSizeFloat = 2 ;
       // CollidingCells = new BvhStructure( gridMap?.GetUsedCells().OfType<Vector3>().Select( vector => new BoundingBox( vector * cellSizeFloat, ( vector + cellSize ) * cellSizeFloat ) ).ToList() ) ;
+      _randomSpawn = GetParent().GetNode<RandomSpawn>( "RandomSpawn" ) ;
+      CallDeferred( nameof( UpdatePlayerPosition ) ) ;
     }
 
+    private void UpdatePlayerPosition()
+    {
+      _randomSpawn.BoidsPool.UpdatePlayerPosition( this ) ;
+    }
     // public BoundingBox GetBoundingBox()
     // {
     //   var _avoidDistance = 3f ;

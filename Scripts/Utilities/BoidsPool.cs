@@ -47,5 +47,10 @@ namespace Fish.Scripts.Utilities
       // _pool.ForEach( boid => _parameter.GridStructure.UpdateBodyPosition( boid, _parameter.GridStructure.ScalePoint( boid.Translation.ToVector2() ) ) ) ;
       // _pool.ForEach( boid => boid.Flock = _parameter.GridStructure.GetBodiesAround( _parameter.GridStructure.ScalePoint( boid.Translation.ToVector2() ) ) ) ;
     }
+
+    public void UpdatePlayerPosition( KinematicBody translation )
+    {
+      _pool.AsParallel().ForAll( boid => boid.UpdatePlayerPosition( translation ) ) ;
+    }
   }
 }
