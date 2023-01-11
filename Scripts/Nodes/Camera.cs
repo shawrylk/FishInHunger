@@ -11,7 +11,7 @@ namespace Fish.Scripts.Nodes
     private Vector3 _limit ;
 
     [Export]
-    private Vector3 _distance = new Vector3( 0, 0, 20 ) ;
+    private Vector3 _distance = new Vector3( 0, 0, 22 ) ;
 
     public override void _Ready()
     {

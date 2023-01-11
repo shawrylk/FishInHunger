@@ -39,6 +39,7 @@ namespace Fish.Scripts.Nodes
     private void UpdatePlayerPosition()
     {
       _randomSpawn.BoidsPool.UpdatePlayerPosition( this ) ;
+      _randomSpawn.Boids2Pool.UpdatePlayerPosition( this ) ;
     }
     // public BoundingBox GetBoundingBox()
     // {
@@ -284,11 +285,20 @@ namespace Fish.Scripts.Nodes
         _owner = owner ;
       }
 
+      private void RestartGame()
+      {
+        _owner.GetTree().ReloadCurrentScene() ;
+      }
+
       public void HandleCollider()
       {
         for ( int index = 0, count = _owner.GetSlideCount() ; index < count ; index++ ) {
           var collision = _owner.GetSlideCollision( index ) ;
-          if ( collision.Collider is Boid boid && boid.IsInGroup( RandomSpawn.BoidsGroupNodePath ) ) {
+          if ( collision.Collider is Boid2 boid2 && boid2.IsInGroup( RandomSpawn.BoidsGroupNodePath ) ) {
+            _owner.SetPhysicsProcess( false ) ;
+            _owner.GetTree().ReloadCurrentScene() ;
+          }
+          else if ( collision.Collider is Boid boid && boid.IsInGroup( RandomSpawn.BoidsGroupNodePath ) ) {
             boid.ReturnToPool() ;
           }
         }

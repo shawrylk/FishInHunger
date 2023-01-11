@@ -52,5 +52,6 @@ namespace Fish.Scripts.Utilities
     {
       _pool.AsParallel().ForAll( boid => boid.UpdatePlayerPosition( translation ) ) ;
     }
+
   }
 }
