@@ -1,6 +1,4 @@
-using System.Collections.Generic ;
 using System.Linq ;
-using System.Threading.Tasks ;
 using Fish.Scripts.Utilities ;
 using Godot ;
 
@@ -35,7 +33,8 @@ namespace Fish.Scripts.Nodes
       var gridMap = GetParent().GetNode<GridMap>( GridMapNodePath ) ;
       var cellSize = gridMap.CellSize ;
       var tileSize = 2f ;
-      var collidingCells = new BvhStructure( gridMap?.GetUsedCells().OfType<Vector3>().Select( vector => new BoundingBox( vector * tileSize, ( vector + cellSize ) * tileSize ) ).ToList() ) ;
+      var collidingCells = new BvhStructure( gridMap?.GetUsedCells().OfType<Vector3>()
+        .Select( vector => new BoundingBox( vector * tileSize, ( vector + cellSize ) * tileSize ) ).ToList() ) ;
       _boidsPool.InitPool( new BoidsPool.BoidsPoolParameter
       {
         BoidGroupName = BoidsGroupName,

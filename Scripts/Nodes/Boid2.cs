@@ -1,13 +1,16 @@
 using System.Collections.Generic ;
 using System.Linq ;
 using Fish.Scripts.Utilities ;
+using Fish.Scripts.Utilities.FoodChain ;
 using Godot ;
 
 namespace Fish.Scripts.Nodes
 {
-  public class Boid2 : Boid
+  public class Boid2 : Boid, IFood
   {
     private float _playerFollowDistance = 15f ;
+    public override FoodChainPosition FoodPosition { get ; protected set ; } = FoodChainPosition.Koi ;
+    private FoodChainHandler _foodChainHandler ;
 
     public override void _Ready()
     {
@@ -16,10 +19,11 @@ namespace Fish.Scripts.Nodes
       SeparationForce = 1f ;
       CohesionForce = 0.1f ;
       GD.Randomize() ;
-      RaiseDegreesX = (float) GD.RandRange( 5, 15 ) ;
+      RaiseDegreesX = (float)GD.RandRange( 5, 15 ) ;
       GD.Randomize() ;
-      RaiseDegreesZ = (float) GD.RandRange( 5, 15 ) ;
+      RaiseDegreesZ = (float)GD.RandRange( 5, 15 ) ;
 
+      _foodChainHandler = new FoodChainHandler( this ) ;
       base._Ready() ;
     }
 
@@ -43,9 +47,11 @@ namespace Fish.Scripts.Nodes
       base._PhysicsProcess( delta ) ;
       for ( int index = 0, count = GetSlideCount() ; index < count ; index++ ) {
         var collision = GetSlideCollision( index ) ;
-        if ( collision.Collider is Boid boid && boid.GetType() != typeof( Boid2 ) && boid.IsInGroup( RandomSpawn.BoidsGroupNodePath ) ) {
-          boid.ReturnToPool() ;
-        }
+        if ( _foodChainHandler.HandleCollision( collision ) ) return ;
+        // if ( collision.Collider is Boid boid && boid.GetType() != typeof( Boid2 ) &&
+        //      boid.IsInGroup( RandomSpawn.BoidsGroupNodePath ) ) {
+        //   boid.ReturnToPool() ;
+        // }
       }
     }
   }

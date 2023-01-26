@@ -2,11 +2,12 @@ using System.Collections.Generic ;
 using System.Linq ;
 using System.Threading.Tasks ;
 using Fish.Scripts.Utilities ;
+using Fish.Scripts.Utilities.FoodChain ;
 using Godot ;
 
 namespace Fish.Scripts.Nodes
 {
-  public class Boid : KinematicBody, ICell, IBoundingBoxGetter
+  public class Boid : KinematicBody, ICell, IBoundingBoxGetter, IFood, IMortalObject
   {
     [Export]
     protected float MaxSpeed = 16 ;
@@ -38,6 +39,7 @@ namespace Fish.Scripts.Nodes
     [Export]
     protected int MaxFlockSize = 15 ;
 
+    protected KinematicBody _player ;
     private const string GraphicsPath = "Graphics" ;
     private const string AnimationPlayerPath = "Graphics/AnimationPlayer" ;
     private const string AnimationSwimmingFastName = "Swimming_Fast" ;
@@ -50,15 +52,15 @@ namespace Fish.Scripts.Nodes
     private AnimationPlayer _animationPlayer ;
     private Vector2 _screenSize ;
     private Vector2 _wrapScreenSize ;
+    private Vector3 _velocity ;
     private readonly List<Vector3> _targets = new List<Vector3>() ;
     protected float RaiseDegreesX ;
     protected float RaiseDegreesZ ;
-    private Vector3 _velocity ;
-    protected KinematicBody _player ;
+    private float _playerAvoidDistance ;
     public ICollection<Boid> Flock { get ; set ; }
     public bool IsDisabled { get ; private set ; }
     public BvhStructure CollidingCells { get ; set ; }
-    private float _playerAvoidDistance ;
+    public virtual FoodChainPosition FoodPosition { get ; protected set ; } = FoodChainPosition.RedSnapper ;
 
     public override void _Ready()
     {
@@ -71,7 +73,7 @@ namespace Fish.Scripts.Nodes
       _animationPlayer.Play( AnimationSwimmingFastName ) ;
       _animationPlayer.GetAnimation( AnimationSwimmingFastName ).Loop = true ;
       GD.Randomize() ;
-      _animationPlayer.PlaybackSpeed = (float) GD.RandRange( 2.5d, 3d ) ;
+      _animationPlayer.PlaybackSpeed = (float)GD.RandRange( 2.5d, 3d ) ;
       // _visibilityNotifier = GetNode<VisibilityNotifier>( VisibilityNotifierPath ) ;
       // if ( _visibilityNotifier != null ) {
       //   _visibilityNotifier.Connect( ScreenEnteredEventName, this, nameof( ShowBoid ) ) ;
@@ -80,12 +82,12 @@ namespace Fish.Scripts.Nodes
       // }
 
       GD.Randomize() ;
-      RaiseDegreesX = (float) GD.RandRange( 10, 30 ) ;
+      RaiseDegreesX = (float)GD.RandRange( 10, 30 ) ;
       GD.Randomize() ;
-      RaiseDegreesZ = (float) GD.RandRange( 5, 30 ) ;
-      _velocity = new Vector3( (float) GD.RandRange( -1d, 1d ), (float) GD.RandRange( -1d, 1d ), 0 ) * MinSpeed ;
+      RaiseDegreesZ = (float)GD.RandRange( 5, 30 ) ;
+      _velocity = new Vector3( (float)GD.RandRange( -1d, 1d ), (float)GD.RandRange( -1d, 1d ), 0 ) * MinSpeed ;
       GD.Randomize() ;
-      _playerAvoidDistance = (float) ( AvoidDistance * ( GD.Randf() + 0.3 ) ) ;
+      _playerAvoidDistance = (float)( AvoidDistance * ( GD.Randf() + 0.3 ) ) ;
       base._Ready() ;
     }
 
@@ -117,7 +119,9 @@ namespace Fish.Scripts.Nodes
       separationVector *= SeparationForce ;
       var additionalVelocity = cohesionVector + alignVector + separationVector ;
       if ( _targets.Count > 0 ) {
-        var targetVector = _targets.Aggregate( Vector3.Zero, ( current, target ) => current + GlobalTranslation.DirectionTo( target ) ) / _targets.Count ;
+        var targetVector =
+          _targets.Aggregate( Vector3.Zero, ( current, target ) => current + GlobalTranslation.DirectionTo( target ) ) /
+          _targets.Count ;
         additionalVelocity += targetVector * TargetForce ;
       }
 
@@ -181,7 +185,8 @@ namespace Fish.Scripts.Nodes
 
     private void WrapScreen()
     {
-      var newTranslation = new Vector3( Mathf.Wrap( Translation.x, 0, _wrapScreenSize.x ), Mathf.Wrap( Translation.y, 0, _wrapScreenSize.y ), 0 ) ;
+      var newTranslation = new Vector3( Mathf.Wrap( Translation.x, 0, _wrapScreenSize.x ),
+        Mathf.Wrap( Translation.y, 0, _wrapScreenSize.y ), 0 ) ;
 
       var doReset = newTranslation != Translation ;
       Translation = newTranslation ;
@@ -190,7 +195,8 @@ namespace Fish.Scripts.Nodes
 
     private (Vector3 center, Vector3 align, Vector3 avoid) GetFlockStatus()
     {
-      var (centerVector, flockCenter, alignVector, avoidVector, otherCount) = ( Vector3.Zero, Vector3.Zero, Vector3.Zero, Vector3.Zero, 0 ) ;
+      var (centerVector, flockCenter, alignVector, avoidVector, otherCount) =
+        ( Vector3.Zero, Vector3.Zero, Vector3.Zero, Vector3.Zero, 0 ) ;
       if ( Flock is null ) return ( centerVector, alignVector, avoidVector ) ;
 
       foreach ( var node in Flock ) {
@@ -202,7 +208,8 @@ namespace Fish.Scripts.Nodes
 
         var otherPosition = node.GlobalTranslation ;
         var otherVelocity = node._velocity ;
-        if ( ! ( GlobalTranslation.DistanceTo( otherPosition ) is var distance ) || ! ( distance < ViewDistance ) ) continue ;
+        if ( ! ( GlobalTranslation.DistanceTo( otherPosition ) is var distance ) ||
+             ! ( distance < ViewDistance ) ) continue ;
         otherCount += 1 ;
         alignVector += otherVelocity ;
         flockCenter += otherPosition ;
@@ -228,7 +235,7 @@ namespace Fish.Scripts.Nodes
       _targets.Clear() ;
     }
 
-    public async void ReturnToPool()
+    private async Task ReturnToPool()
     {
       HideBoid() ;
       IsDisabled = true ;
@@ -238,7 +245,8 @@ namespace Fish.Scripts.Nodes
       parent?.RemoveChild( this ) ;
       await Task.Delay( 1000 ) ;
       var spawnOnRightScreen = GD.Randf() > 0.5f ;
-      this.Translation = new Vector3( ( spawnOnRightScreen ? 1 : -1 ) * _wrapScreenSize.x, GD.Randf() * _wrapScreenSize.y, 0 ) ;
+      this.Translation = new Vector3( ( spawnOnRightScreen ? 1 : -1 ) * _wrapScreenSize.x,
+        GD.Randf() * _wrapScreenSize.y, 0 ) ;
       parent?.AddChild( this ) ;
       ShowBoid() ;
       IsDisabled = false ;
@@ -260,6 +268,18 @@ namespace Fish.Scripts.Nodes
     {
       var vector = new Vector3( AvoidDistance, AvoidDistance, AvoidDistance ) ;
       return new BoundingBox( Translation - vector, Translation + vector ) ;
+    }
+
+    private async Task<bool> KillImplement()
+    {
+      await ReturnToPool() ;
+      return true ;
+    }
+
+    public bool Kill()
+    {
+      _ = KillImplement() ;
+      return true ;
     }
   }
 }
